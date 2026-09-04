@@ -7,7 +7,11 @@ import { useEffect, useRef, useState } from 'react';
 import { db } from '../../db/db';
 import { seedCatalogs } from '../../db/seed';
 import { EXPORT_FIELDS } from '../../export/fields';
-import { estadoCache, getEndpoint, limpiarCache, setEndpoint } from '../../conservation/lookup';
+import {
+  borrarNomina, estadoCache, getEndpoint, guardarNomina, limpiarCache,
+  nominaCargada, setEndpoint,
+} from '../../conservation/lookup';
+import { leerNomina, resumirNomina } from '../../conservation/nomina';
 import { Icono } from '../Icono';
 import { MODOS, readModo, setModo, type Modo } from '../modo';
 import {
@@ -50,9 +54,11 @@ export function Ajustes() {
   const [modo, setModoLocal] = useState<Modo | null>(() => readModo());
   const [rceUrl, setRceUrl] = useState('');
   const [cache, setCache] = useState<{ especies: number; masAntigua: string | null }>({ especies: 0, masAntigua: null });
+  const [nomina, setNomina] = useState<{ archivo: string; cargadaEl: string; especies: number } | null>(null);
   useEffect(() => {
     void getEndpoint().then((v) => setRceUrl(v ?? ''));
     void estadoCache().then(setCache);
+    void nominaCargada().then(setNomina);
   }, []);
   const [kml, setKml] = useState<StationCandidate[] | null>(null);
   const [chosen, setChosen] = useState<Set<string>>(new Set());
@@ -204,8 +210,62 @@ export function Ajustes() {
           cambia con cada proceso de clasificación y una copia vieja se convierte en una
           categoría equivocada dentro de un informe. Se consulta en línea.
         </p>
+        {nomina ? (
+          <p style={{ margin: '0 0 10px' }}>
+            <span className="chip ok">{nomina.especies} especies</span>{' '}
+            <span className="chip">{nomina.archivo.slice(0, 34)}</span>{' '}
+            <span className="chip muted">cargada el {nomina.cargadaEl.slice(0, 10)}</span>
+          </p>
+        ) : (
+          <p className="chip warn" style={{ display: 'block', marginBottom: 10 }}>
+            Sin nómina cargada: los registros van a salir sin categoría.
+          </p>
+        )}
+
+        <div className="row" style={{ marginBottom: 10 }}>
+          <a className="btn" style={{ display: 'grid', placeItems: 'center', textDecoration: 'none' }}
+            href="https://clasificacionespecies.mma.gob.cl" target="_blank" rel="noreferrer">
+            1 · Bajar del MMA
+          </a>
+          <label className="btn primary" style={{ display: 'grid', placeItems: 'center' }}>
+            2 · Cargar el archivo
+            <input type="file" accept=".xlsx,.xls" hidden onChange={async (e) => {
+              const file = e.target.files?.[0];
+              e.target.value = '';
+              if (!file) return;
+              try {
+                const leida = leerNomina(await file.arrayBuffer(), file.name);
+                await guardarNomina(leida);
+                setNomina(await nominaCargada());
+                const r = resumirNomina(leida);
+                s.notify(
+                  `${r.total} especies · ${r.amenazadas} amenazadas · ${r.compuestas} con categoría regional`
+                  + (leida.duplicadosResueltos.length
+                    ? ` · ${leida.duplicadosResueltos.length} duplicado(s) resueltos al proceso más reciente`
+                    : ''),
+                );
+              } catch (err) {
+                s.notify(err instanceof Error ? err.message : 'No se pudo leer el archivo.', 'error');
+              }
+            }} />
+          </label>
+          {nomina && (
+            <button className="btn ghost" onClick={async () => {
+              await borrarNomina();
+              setNomina(null);
+              s.notify('Nómina borrada.');
+            }}>Quitar</button>
+          )}
+        </div>
+        <p className="muted" style={{ fontSize: 12 }}>
+          El sitio del MMA no permite que la app descargue el archivo sola, así que se baja a
+          mano y se carga aquí. Cuando una especie aparece dos veces —una por proceso de
+          clasificación— <b>se toma la del proceso más reciente</b>, que es lo que deja
+          <i> Aegla papudo</i> y <i>Sophora masafuerana</i> en la categoría vigente.
+        </p>
+
         <div className="field">
-          <label htmlFor="rce">Servicio de consulta</label>
+          <label htmlFor="rce">Servicio de consulta (opcional)</label>
           <input id="rce" type="text" value={rceUrl} placeholder="https://…/rce"
             onChange={(e) => setRceUrl(e.target.value)}
             onBlur={() => void setEndpoint(rceUrl || null)} />

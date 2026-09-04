@@ -458,9 +458,35 @@ La nómina del MMA **no viaja dentro de la app**. La razón es la fecha: a junio
 convierte en una categoría equivocada dentro de un informe que va a la autoridad.
 El catálogo de especies que trae ProTerr sale ahora sin ninguna categoría puesta.
 
-Se consulta a un servicio configurable (Ajustes → Categoría de conservación), que
-recibe `?nombre=<binomio>` y responde JSON con `categoria` y, si los tiene,
-`origen`, `endemica`, `fuente` y `fechaFuente`.
+**El sitio del MMA no permite que la app descargue el archivo sola.** Se comprobó:
+`clasificacionespecies.mma.gob.cl` responde 200 pero sin cabecera
+`Access-Control-Allow-Origin`, así que el navegador bloquea la descarga desde otro
+origen. No es un problema de permisos ni de red: es política del servidor, y sólo
+se resuelve con un proxy propio.
+
+Por eso la carga es **a mano y en dos pasos**, en Ajustes: se baja el XLSX del
+sitio del MMA y se carga en la app, que lo lee entero (~1.600 filas), resuelve los
+duplicados y guarda el resultado con el nombre del archivo y la fecha, para poder
+citarlo en el informe.
+
+Queda además un **servicio de consulta opcional** que recibe `?nombre=<binomio>` y
+responde JSON con `categoria` y, si los tiene, `origen`, `endemica`, `fuente` y
+`fechaFuente`. Sirve cuando exista un servidor propio que haga de proxy del MMA.
+El orden de consulta es: nómina cargada → servicio → lo ya consultado.
+
+### Tres rarezas del archivo oficial que hay que respetar
+
+1. **Una especie puede aparecer dos veces**, una por cada proceso de clasificación
+   en que se la revisó. Vale la del **proceso más alto**. A junio de 2026 son dos
+   casos —*Aegla papudo* y *Sophora masafuerana*, ambas subidas a CR— y quedarse
+   con la primera fila deja dos categorías atrasadas.
+2. **La categoría no siempre es un código.** De 74 valores distintos, 92 especies
+   traen categorías compuestas o regionales: «EN (JF); LC (Chile continental)».
+   Se guardan tal cual. Reducirlas a un código sería inventar, porque la categoría
+   de esa especie depende de dónde está.
+3. **Hay entradas que no son especies válidas**, marcadas como «Nombre científico
+   NO válido; sinonimia de…». Se conservan con esa nota: quien dictó ese nombre
+   necesita ver que existe pero es sinónimo.
 
 **Todo lo consultado se guarda.** Una especie ya preguntada responde después sin
 señal, con la fecha de consulta a la vista, para que quien lea el informe sepa de
