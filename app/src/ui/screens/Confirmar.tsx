@@ -15,6 +15,9 @@ import { useStore } from '../../state/store';
 import { requirementFor } from '../../validation/profiles';
 import { METHOD_LABELS } from './Terreno';
 
+/** Patrón de vuelo, tal como se anota en el monitoreo nocturno. */
+const TIPO_VUELO = ['Directo', 'En círculos', 'Ascendente', 'Descendente', 'Migratorio', 'Percha a percha'];
+
 /** Vocabulario por defecto; una plantilla puede traer el suyo. */
 const REPRODUCTIVA = [
   'No registrada', 'Hembra con crías', 'Macho con crías', 'Hembra en celo',
@@ -67,7 +70,8 @@ function DraftCard({ draft, index }: { draft: ObservationDraft; index: number })
   const station = s.stations.find((st) => st.id === draft.stationId) ?? null;
   const vocab = s.vocabularies;
   const patch = (p: Partial<ObservationDraft>) => s.patchDraft(draft.draftId, p);
-  const isAerial = draft.method === 'transito_aereo';
+  const isNightAerial = draft.method === 'transito_aereo_nocturno';
+  const isAerial = draft.method === 'transito_aereo' || isNightAerial;
   // Cada metodología pide lo suyo: la trampa y la línea sólo existen en
   // trampeo, igual que el origen del vuelo sólo existe en tránsito aéreo.
   const isTrapping = draft.method === 'trampa_sherman' || draft.method === 'camara_trampa';
@@ -253,6 +257,26 @@ function DraftCard({ draft, index }: { draft: ObservationDraft; index: number })
                 <input type="number" min={0} value={draft.aerial?.flightHeightMeters ?? ''}
                   onChange={(e) => patch({ aerial: { ...draft.aerial, flightHeightMeters: e.target.value === '' ? null : Number(e.target.value) } })} />
               </Field>
+              {/* De noche la altura no se mide: se compara con algo que se ve.
+                  Sin decir contra qué, el número no significa nada. */}
+              {isNightAerial && (
+                <>
+                  <Field label="Referencia de altura">
+                    <input type="text" value={draft.aerial?.heightReference ?? ''}
+                      placeholder="sobre el cerro, bajo la torre"
+                      onChange={(e) => patch({ aerial: { ...draft.aerial, heightReference: e.target.value || null } })} />
+                  </Field>
+                  <Field label="Tipo de vuelo">
+                    <Select value={draft.aerial?.flightType ?? ''}
+                      options={vocab.flightType ?? TIPO_VUELO}
+                      onChange={(v) => patch({ aerial: { ...draft.aerial, flightType: v || null } })} />
+                  </Field>
+                  <Field label="Bloque horario">
+                    <input type="text" value={draft.timeBlock ?? ''} placeholder="21:00 - 03:00"
+                      onChange={(e) => patch({ timeBlock: e.target.value || null })} />
+                  </Field>
+                </>
+              )}
             </div>
           )}
 

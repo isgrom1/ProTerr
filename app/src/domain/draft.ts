@@ -22,6 +22,8 @@ export interface ObservationDraft {
   dateTimeEditedByUser: boolean;
   recordedBy: string | null;
   weather: string | null;
+  /** Bloque horario del turno nocturno ("21:00 - 03:00"), en MTAN. */
+  timeBlock: string | null;
 
   taxonId: string | null;
   /** Candidatos cuando el nombre común es ambiguo; la app pregunta, no elige. */
@@ -67,7 +69,7 @@ export function emptyDraft(draftId: string, source: RecordSource = 'manual'): Ob
   return {
     draftId, projectId: null, campaignId: null, stationId: null, siteId: null,
     method: null, eventDate: null, eventTime: null, dateTimeEditedByUser: false,
-    recordedBy: null, weather: null,
+    recordedBy: null, weather: null, timeBlock: null,
     taxonId: null, taxonCandidates: [], verbatimTaxonText: null,
     recordType: null, recordTypeInferred: false, individualCount: null, countInferred: false,
     sex: null, sexScope: 'sin_definir', lifeStage: null, lifeStageScope: 'sin_definir',

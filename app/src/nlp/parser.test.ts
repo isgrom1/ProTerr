@@ -368,3 +368,12 @@ describe('trampeo Sherman', () => {
     expect(r.observations[0].trapNumber).toBeNull();
   });
 });
+
+describe('tránsito aéreo nocturno (MTAN)', () => {
+  it('no se confunde con el diurno', () => {
+    expect(parse('transito aereo nocturno en EMF09, dos garumas').method)
+      .toBe('transito_aereo_nocturno');
+    expect(parse('MTAN en EMF09, dos garumas').method).toBe('transito_aereo_nocturno');
+    expect(parse('transito aereo en EMF09, dos garumas').method).toBe('transito_aereo');
+  });
+});

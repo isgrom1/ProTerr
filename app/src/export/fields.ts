@@ -23,6 +23,7 @@ export const METHOD_LABEL: Record<MethodCode, string> = {
   trampa_sherman: 'Trampas Sherman',
   songmeter: 'Grabadora acústica',
   transito_aereo: 'Tránsito aéreo',
+  transito_aereo_nocturno: 'Tránsito aéreo nocturno (MTAN)',
   punto_conteo: 'Punto de conteo',
   atropello: 'Atropello',
   registro_oportunista: 'Registro oportunista',
@@ -66,6 +67,9 @@ export const EXPORT_FIELDS: ExportField[] = [
   { id: 'event.wind', label: 'Viento (Beaufort)', group: 'Evento', aliases: ['viento', 'beaufort'], resolve: (r) => blank(r.event.conditions?.windBeaufort) },
   { id: 'event.cloud', label: 'Nubosidad (octas)', group: 'Evento', aliases: ['nubosidad', 'nubes', 'octas'], resolve: (r) => blank(r.event.conditions?.cloudOctas) },
   { id: 'event.precipitation', label: 'Precipitación', group: 'Evento', aliases: ['precipitacion', 'lluvia'], resolve: (r) => blank(r.event.conditions?.precipitation) },
+  { id: 'event.performed', label: '¿Se realizó?', group: 'Evento', aliases: ['se realizo', 'se realizo si o no', 'porque se realizo', 'realizado', 'ejecutado', 'se ejecuto', 'se hizo'], resolve: (r) => (r.event.performed === false ? 'NO' : r.event.performed === true ? 'SI' : '') },
+  { id: 'event.notPerformedReason', label: '¿Por qué no se realizó?', group: 'Evento', aliases: ['porque no se realizo', 'por que no se realizo', 'motivo', 'razon', 'porque no se hizo', 'motivo de no ejecucion'], resolve: (r) => blank(r.event.notPerformedReason) },
+  { id: 'event.noDetections', label: 'Sin detecciones', group: 'Evento', aliases: ['sin detecciones', 'sin registros', 'estacion vacia'], resolve: (r) => yesNo(r.event.noDetections) },
   { id: 'event.notes', label: 'Observaciones del muestreo', group: 'Evento', aliases: ['observaciones del muestreo', 'notas del muestreo'], resolve: (r) => blank(r.event.notes) },
   { id: 'event.id', label: 'ID del muestreo', group: 'Evento', aliases: ['eventid', 'id muestreo', 'id evento'], resolve: (r) => r.event.id },
 
@@ -138,6 +142,11 @@ export const EXPORT_FIELDS: ExportField[] = [
   { id: 'aerial.destination', label: 'Destino del vuelo', group: 'Vuelo', aliases: ['destino', 'destination'], resolve: (r) => blank(r.occurrence.aerial?.destination) },
   { id: 'aerial.direction', label: 'Dirección de vuelo', group: 'Vuelo', aliases: ['direccion de vuelo', 'direccion vuelo', 'rumbo'], resolve: (r) => blank(r.occurrence.aerial?.flightDirection) },
   { id: 'aerial.heightCategory', label: 'Categoría de altura', group: 'Vuelo', aliases: ['altura vuelo', 'categoria de altura', 'categoria altura', 'referencia de altura', 'referencia altura'], resolve: (r) => blank(r.occurrence.aerial?.flightHeightCategory) },
+  { id: 'aerial.heightReference', label: 'Referencia de altura', group: 'Vuelo', aliases: ['referencia de altura', 'referencia altura', 'altura referencia'], resolve: (r) => blank(r.occurrence.aerial?.heightReference) },
+  { id: 'aerial.flightType', label: 'Tipo de vuelo', group: 'Vuelo', // "tipo vuelo" a secas se parece demasiado a un "TIPO" suelto, que en las
+  // planillas es el tipo de estación: se deja sólo la forma completa.
+  aliases: ['tipo de vuelo', 'patron de vuelo', 'patron vuelo'], resolve: (r) => blank(r.occurrence.aerial?.flightType) },
+  { id: 'event.timeBlock', label: 'Bloque horario', group: 'Evento', aliases: ['bloque horario', 'bloque horario de em', 'turno', 'franja horaria'], resolve: (r) => blank(r.event.timeBlock) },
   { id: 'aerial.heightMeters', label: 'Altura de vuelo (m)', group: 'Vuelo', aliases: ['altura vuelo lat o metros', 'altura en metros', 'altura m'], resolve: (r) => blank(r.occurrence.aerial?.flightHeightMeters) },
 
   // --- Esfuerzo ---

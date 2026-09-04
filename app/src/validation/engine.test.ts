@@ -334,3 +334,34 @@ describe('campos según el canal de detección', () => {
     expect(r.issues.some((i) => i.field === 'lifeStage')).toBe(false);
   });
 });
+
+describe('MTAN: el nocturno no es el diurno con otro horario', () => {
+  it('exige la referencia contra la que se estimó la altura', () => {
+    // De noche la altura no se mide: se compara con algo que se ve.
+    expect(requirementFor(DEFAULT_PROFILE, 'flightHeightReference', { method: 'transito_aereo_nocturno' })).toBe('required');
+    expect(requirementFor(DEFAULT_PROFILE, 'flightHeightReference', { method: 'transito_aereo' })).toBe('hidden');
+    expect(requirementFor(DEFAULT_PROFILE, 'flightHeightReference', { method: 'transecto' })).toBe('hidden');
+  });
+
+  it('no pide sexo, edad ni conducta: de noche eso se inventaría', () => {
+    for (const campo of ['sex', 'lifeStage', 'behaviour'] as const) {
+      expect(requirementFor(DEFAULT_PROFILE, campo, { method: 'transito_aereo_nocturno' })).toBe('hidden');
+    }
+  });
+
+  it('trabaja por bloque horario, no por punto de observación', () => {
+    expect(requirementFor(DEFAULT_PROFILE, 'timeBlock', { method: 'transito_aereo_nocturno' })).toBe('required');
+    expect(requirementFor(DEFAULT_PROFILE, 'timeBlock', { method: 'transito_aereo' })).toBe('hidden');
+  });
+
+  it('reclama la referencia de altura pero deja guardar igual', () => {
+    const d = draftOf({
+      method: 'transito_aereo_nocturno', taxonId: byName('Cóndor').id,
+      recordType: 'Individuo', individualCount: 2,
+      aerial: { flightDirection: 'N', flightHeightMeters: 40 },
+    });
+    const r = validateDraft(d, { profile: DEFAULT_PROFILE, taxon: byName('Cóndor'), resolveTaxon });
+    expect(r.canSave).toBe(true);
+    expect(whatIsMissing(r).join(' ')).toContain('referencia de altura');
+  });
+});

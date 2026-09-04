@@ -17,14 +17,21 @@ import { editDistance } from '../nlp/text';
 export type SheetScope =
   /** Una fila por observación, sin las de tránsito aéreo. */
   | 'registros'
-  /** Una fila por observación de tránsito aéreo. */
+  /** Una fila por observación de tránsito aéreo diurno. */
   | 'transito_aereo'
+  /** Una fila por observación de tránsito aéreo nocturno (MTAN). */
+  | 'transito_aereo_nocturno'
   /** Una fila por observación de trampeo (Sherman y cámara trampa). */
   | 'trampeo'
   /** Una fila por observación, todas juntas. */
   | 'registros_todos'
   /** Una fila por muestreo (evento). */
   | 'muestreos'
+  /**
+   * Una fila por celda del plan: estación × metodología, se haya hecho o no.
+   * Es la grilla con que sale el equipo a terreno y vuelve marcada.
+   */
+  | 'plan'
   /** Una fila por estación usada. */
   | 'estaciones';
 
@@ -107,6 +114,20 @@ export const NATIVE_TEMPLATE: ExportTemplate = {
       ],
     },
     {
+      // La grilla del plan: sale con todo lo planificado y vuelve marcada.
+      // Una celda vacía no es lo mismo que una marcada "NO": la primera está
+      // pendiente, la segunda se intentó y no se pudo, y dice por qué.
+      name: 'Plan',
+      scope: 'plan',
+      columns: [
+        column('station.code'), column('station.sector'), column('station.region'),
+        column('event.method'), column('event.performed'), column('event.notPerformedReason'),
+        column('event.date'), column('event.recordedBy'), column('event.team'),
+        column('station.utmEast'), column('station.utmNorth'),
+        column('event.noDetections'), column('effort.duration'), column('effort.distance'),
+      ],
+    },
+    {
       // El trampeo tiene su propia hoja porque tiene sus propias columnas: la
       // línea y la trampa donde cayó el animal no existen en un transecto.
       name: 'Trampeo',
@@ -127,6 +148,28 @@ export const NATIVE_TEMPLATE: ExportTemplate = {
         column('taxon.specificEpithet'),
         column('conservation.category'), column('conservation.origin'), column('conservation.endemic'),
         column('occurrence.photos'), column('occurrence.notes'),
+        column('trace.occurrenceId'), column('trace.createdBy'), column('trace.createdAt'),
+      ],
+    },
+    {
+      // MTAN. No es el diurno en otro horario: la altura se estima contra una
+      // referencia visible en vez de medirse, y el turno se organiza por
+      // bloque horario, no por punto de observación continuo.
+      name: 'MTAN',
+      scope: 'transito_aereo_nocturno',
+      columns: [
+        column('event.date'), column('occurrence.time'), column('event.timeBlock'),
+        column('project.name'), column('campaign.season'),
+        column('station.code'), column('station.sector'),
+        column('event.recordedBy'), column('event.team'), column('event.weather'),
+        column('station.slope'),
+        column('occurrence.commonName'), column('taxon.scientificName'),
+        column('taxon.class'), column('occurrence.count'),
+        column('occurrence.recordType'), column('station.habitat'),
+        column('aerial.heightMeters'), column('aerial.heightReference'),
+        column('aerial.direction'), column('aerial.flightType'),
+        column('aerial.origin'), column('aerial.destination'),
+        column('occurrence.notes'),
         column('trace.occurrenceId'), column('trace.createdBy'), column('trace.createdAt'),
       ],
     },
@@ -259,9 +302,16 @@ function matchHeader(q: string): HeaderMatch {
 export function guessScope(fieldIds: Array<string | null>): SheetScope {
   const ids = new Set(fieldIds.filter(Boolean) as string[]);
   const has = (prefix: string) => [...ids].some((id) => id.startsWith(prefix));
+  // El nocturno se reconoce por lo que sólo él tiene: la referencia contra la
+  // que se estimó la altura, el patrón de vuelo y el bloque horario del turno.
+  if (ids.has('aerial.heightReference') || ids.has('aerial.flightType') || ids.has('event.timeBlock')) {
+    return 'transito_aereo_nocturno';
+  }
   if (ids.has('aerial.heightMeters') || ids.has('aerial.origin') || ids.has('aerial.direction')) {
     return 'transito_aereo';
   }
+  // La grilla del plan se delata por las dos columnas que la hacen un plan.
+  if (ids.has('event.performed') || ids.has('event.notPerformedReason')) return 'plan';
   if (has('occurrence.') || ids.has('taxon.scientificName')) return 'registros';
   if (has('effort.')) return 'muestreos';
   if (has('station.')) return 'estaciones';

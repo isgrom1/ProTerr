@@ -93,6 +93,10 @@ especie**, porque no se estaba registrando ninguna. La ladera se lee antes que
 el rumbo justamente para que «plano-este-oeste» no se confunda con la dirección
 de vuelo de un ave.
 
+**No realizado**: «no se realizó, camino cortado», «no se pudo hacer por
+lluvia», «no se hizo». Marca la celda del plan como intentada y sin poder
+hacerse, con el motivo. Es distinto de «sin registros», donde sí se recorrió.
+
 **Trampeo**: «sherman de PMF34, olivaceo en trampa 11 de la línea asociada al
 punto 40» deja la trampa en el registro (`trapNumber`) y la línea como sitio
 dentro de la estación, creándola si no existía. Si lo que sigue a «trampa» no es

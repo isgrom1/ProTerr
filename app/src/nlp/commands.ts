@@ -24,6 +24,11 @@ export type VoiceCommand =
   | { kind: 'cerrar_track' }
   | { kind: 'marcar_punto'; label: string }
   | { kind: 'sin_detecciones' }
+  /**
+   * La estación estaba planificada y no se pudo hacer. Es distinto de
+   * "sin detecciones": ahí sí se recorrió.
+   */
+  | { kind: 'no_realizado'; motivo: string | null }
   /** Ritmo de terreno: repetir, deshacer y corregir sin abrir nada. */
   | { kind: 'otro_igual'; veces: number }
   | { kind: 'deshacer' }
@@ -73,6 +78,12 @@ const RULES: Rule[] = [
   {
     test: /^(sin registros?|sin detecciones?|nada que registrar|estacion vacia)$/,
     build: () => ({ kind: 'sin_detecciones' }),
+  },
+  {
+    // "no se realizó, camino cortado" · "no se pudo hacer por lluvia" ·
+    // "no se hizo". El motivo es opcional pero es lo que hace útil el dato.
+    test: /^no se (?:realizo|pudo(?: hacer)?|hizo|ejecuto|alcanzo)(?:[,.]?\s*(?:por(?:que)?\s+)?(.+))?$/,
+    build: (m) => ({ kind: 'no_realizado', motivo: m[1]?.trim() || null }),
   },
   {
     // Ver cinco chercanes seguidos es normal: repetir el último sin volver a dictarlo.

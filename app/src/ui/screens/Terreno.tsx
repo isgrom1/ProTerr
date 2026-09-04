@@ -54,6 +54,7 @@ export function Terreno() {
       case 'cerrar_track': void s.finishTrack(); break;
       case 'marcar_punto': void s.addWaypoint(String(command.label)); break;
       case 'sin_detecciones': void s.recordNoDetections(); break;
+      case 'no_realizado': void s.recordNotPerformed(command.motivo as string | null); break;
       case 'cambiar_estacion': {
         const match = stations.find((st) => st.stationCode === command.stationCode);
         if (match) { s.select({ stationId: match.id }); s.notify(`Estación ${match.stationCode}.`); }
@@ -234,6 +235,7 @@ export function Terreno() {
 export const METHOD_LABELS: Record<string, string> = {
   transecto: 'Transecto', playback_aves: 'Playback aves', playback_anfibios: 'Playback anfibios',
   camara_trampa: 'Cámara trampa', trampa_sherman: 'Trampas Sherman', songmeter: 'Songmeter',
-  transito_aereo: 'Tránsito aéreo', punto_conteo: 'Punto de conteo', atropello: 'Atropello',
+  transito_aereo: 'Tránsito aéreo', transito_aereo_nocturno: 'Tránsito aéreo nocturno',
+  punto_conteo: 'Punto de conteo', atropello: 'Atropello',
   registro_oportunista: 'Registro oportunista', otro: 'Otro',
 };

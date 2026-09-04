@@ -19,7 +19,7 @@ export const DISTANCE_METHODS: MethodCode[] = ['transecto', 'registro_oportunist
 /** Metodologías cuyo esfuerzo se mide en trampas × noches. */
 export const TRAP_METHODS: MethodCode[] = ['camara_trampa', 'trampa_sherman'];
 /** Metodologías cuyo esfuerzo se mide en tiempo de permanencia. */
-export const DURATION_METHODS: MethodCode[] = ['punto_conteo', 'playback_aves', 'playback_anfibios', 'transito_aereo', 'songmeter'];
+export const DURATION_METHODS: MethodCode[] = ['punto_conteo', 'playback_aves', 'playback_anfibios', 'transito_aereo', 'transito_aereo_nocturno', 'songmeter'];
 
 /**
  * Filtro de puntos GPS antes de sumarlos al recorrido.

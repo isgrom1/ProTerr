@@ -29,6 +29,9 @@ describe('comandos de voz', () => {
     ['Deshacer', { kind: 'deshacer' }],
     ['me equivoqué', { kind: 'deshacer' }],
     ['corrige, eran dos', { kind: 'corregir', texto: 'eran dos' }],
+    ['no se realizó, camino cortado', { kind: 'no_realizado', motivo: 'camino cortado' }],
+    ['No se pudo hacer por lluvia', { kind: 'no_realizado', motivo: 'lluvia' }],
+    ['no se hizo', { kind: 'no_realizado', motivo: null }],
     ['no, era hembra', { kind: 'corregir', texto: 'era hembra' }],
   ];
   for (const [text, expected] of cases) {

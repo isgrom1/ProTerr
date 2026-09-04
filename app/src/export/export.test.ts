@@ -92,6 +92,34 @@ describe('exportación por plantilla', () => {
     placeholders: { cliente: 'Cliente demo', proyecto: 'Proyecto de demostración' },
   });
 
+  it('la hoja del plan sale con lo planificado, se haya hecho o no', () => {
+    // La estación declara dos metodologías y sólo se hizo una; la otra
+    // quedó marcada como no realizada, con su motivo.
+    const planeada: Station = { ...station, methods: ['transecto', 'trampa_sherman'] };
+    const noRealizado = {
+      ...event('e9', 'trampa_sherman'),
+      performed: false, notPerformedReason: 'camino cortado',
+    };
+    const conPlan = buildWorkbook(records, NATIVE_TEMPLATE, {
+      events: [e1, e2, e3, noRealizado], stations: [planeada],
+    });
+    const filas = XLSX.utils.sheet_to_json<Record<string, unknown>>(conPlan.Sheets.Plan);
+    const sherman = filas.find((f) => f['Metodología'] === 'Trampas Sherman')!;
+    expect(sherman['¿Se realizó?']).toBe('NO');
+    expect(sherman['¿Por qué no se realizó?']).toBe('camino cortado');
+    expect(filas.some((f) => f['Metodología'] === 'Transecto')).toBe(true);
+  });
+
+  it('una celda del plan que nadie tocó sale en blanco, no marcada', () => {
+    const planeada: Station = { ...station, methods: ['transecto', 'playback_aves'] };
+    const conPlan = buildWorkbook(records, NATIVE_TEMPLATE, { events: [e1], stations: [planeada] });
+    const filas = XLSX.utils.sheet_to_json<Record<string, unknown>>(conPlan.Sheets.Plan, { defval: '' });
+    const pendiente = filas.find((f) => f['Metodología'] === 'Playback aves')!;
+    // Pendiente no es lo mismo que "no se realizó": esa distinción es el dato.
+    expect(pendiente['¿Se realizó?']).toBe('');
+    expect(pendiente['ID Estación']).toBe('EMF01');
+  });
+
   it('produce las hojas que declara la plantilla, no un formato fijo', () => {
     expect(wb.SheetNames).toEqual(NATIVE_TEMPLATE.sheets.map((sh) => sh.name));
   });

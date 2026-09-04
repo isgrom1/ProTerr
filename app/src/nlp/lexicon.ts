@@ -143,7 +143,10 @@ export const METHOD_LEXICON: Array<LexEntry<MethodCode>> = [
   { phrases: ['camara trampa', 'camaras trampa', 'trampa camara'], value: 'camara_trampa' },
   { phrases: ['trampas sherman', 'trampa sherman', 'sherman'], value: 'trampa_sherman' },
   { phrases: ['songmeter', 'song meter', 'grabadora acustica'], value: 'songmeter' },
-  { phrases: ['transito aereo', 'transito', 'ta'], value: 'transito_aereo' },
+  // El nocturno primero: la frase más larga gana, y "transito aereo nocturno"
+  // no puede resolverse como el diurno por empezar igual.
+  { phrases: ['transito aereo nocturno', 'monitoreo de transito aereo nocturno', 'mtan', 'visor nocturno', 'aereo nocturno'], value: 'transito_aereo_nocturno' },
+  { phrases: ['transito aereo', 'transito aereo diurno', 'transito', 'ta'], value: 'transito_aereo' },
   { phrases: ['punto de conteo', 'punto conteo'], value: 'punto_conteo' },
   { phrases: ['atropello', 'atropellos', 'road kill'], value: 'atropello' },
 ];

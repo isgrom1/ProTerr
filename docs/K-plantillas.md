@@ -129,11 +129,19 @@ juntarlo todo deja columnas vacías en casi todas las filas.
 
 | Hoja | Alcance (`scope`) | Qué lleva de más |
 | --- | --- | --- |
+| `Plan` | `plan` | Una fila por celda planificada, se haya hecho o no |
 | `Registros` | `registros` | Todo lo que no tiene hoja propia |
 | `Trampeo` | `trampeo` | Línea, n° de trampa, código del individuo, recaptura |
+| `MTAN` | `transito_aereo_nocturno` | Bloque horario, referencia de altura, tipo de vuelo |
 | `Tránsito aéreo` | `transito_aereo` | Origen, destino, dirección y altura de vuelo |
 | `Muestreos` | `muestreos` | Una fila por evento, con esfuerzo |
 | `Estaciones` | `estaciones` | Una fila por estación |
+
+La hoja `Plan` es la grilla con que sale el equipo y vuelve marcada. Tiene tres
+estados y son distintos: **realizado** (hay muestreo, con o sin detecciones),
+**no realizado** (se intentó y no se pudo, con su motivo) y **pendiente** (celda
+en blanco, todavía por hacer). Confundir el último con el segundo es lo que hace
+que una campaña parezca peor de lo que fue.
 
 El alcance `registros_todos` sigue existiendo para una plantilla ajena que sí
 quiera una sola hoja con todo.

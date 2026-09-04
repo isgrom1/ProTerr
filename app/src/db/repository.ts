@@ -187,7 +187,10 @@ export async function applyEventPatch(
  */
 export async function getOrCreateEvent(
   key: EventKey,
-  extra: { eventTime: string; recordedBy?: string | null; weather?: string | null; deviceFix?: GeoFix | null; projectCode: string },
+  extra: {
+    eventTime: string; recordedBy?: string | null; weather?: string | null;
+    timeBlock?: string | null; deviceFix?: GeoFix | null; projectCode: string;
+  },
   session: Session,
 ): Promise<SamplingEvent> {
   const existing = await db.events
@@ -210,6 +213,7 @@ export async function getOrCreateEvent(
     dateTimeEditedByUser: false,
     recordedBy: extra.recordedBy ?? null,
     weather: extra.weather ?? null,
+    timeBlock: extra.timeBlock ?? null,
     notes: null,
     deviceFix: extra.deviceFix ?? null,
     // El esfuerzo NO se abre solo. En el uso normal el usuario dice "EMF44" y
@@ -267,7 +271,10 @@ export async function commitDraft(
       projectId: draft.projectId, campaignId: draft.campaignId, stationId: draft.stationId,
       siteId: draft.siteId ?? null, method: draft.method, eventDate,
     },
-    { eventTime, recordedBy: draft.recordedBy, weather: draft.weather, deviceFix: opts.deviceFix, projectCode: opts.projectCode },
+    {
+      eventTime, recordedBy: draft.recordedBy, weather: draft.weather,
+      timeBlock: draft.timeBlock, deviceFix: opts.deviceFix, projectCode: opts.projectCode,
+    },
     session,
   );
 

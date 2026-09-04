@@ -10,7 +10,9 @@ import type { Taxon } from '../../domain/types';
 import { buildDwcArchive, toCsv } from '../../export/dwca';
 import { buildWorkbook, workbookToBlob } from '../../export/workbook';
 import { countSensitive, type SensitivityPolicy } from '../../export/sensitive';
+import { METHOD_LABEL } from '../../export/fields';
 import { flatten, type Catalogs } from '../../export/shape';
+import { pending as pendingPlan } from '../../plan/coverage';
 import { tallyBySpecies } from '../../quality/report';
 import { retryFailed } from '../../sync/engine';
 import { useStore } from '../../state/store';
@@ -46,6 +48,7 @@ export function Resumen() {
   const today = new Date().toISOString().slice(0, 10);
   const todays = s.records.filter((r) => r.event.eventDate === today);
 
+  const pendingRows = useMemo(() => (s.plan ? pendingPlan(s.plan) : []), [s.plan]);
   const stats = useMemo(() => ({
     stations: new Set(todays.map((r) => r.event.stationId)).size,
     records: todays.length,
@@ -86,6 +89,42 @@ export function Resumen() {
           <div><b>{stats.species}</b><span>Especies</span></div>
         </div>
       </section>
+
+      {/* La campaña no es lo que se encontró: es una grilla de estaciones por
+          metodología. Lo que falta y lo que no se pudo hacer son datos. */}
+      {s.plan && s.plan.planned > 0 && (
+        <section className="card">
+          <h2>Cobertura del plan</h2>
+          <div className="stat">
+            <div><b>{s.plan.done}</b><span>Realizadas</span></div>
+            <div><b>{s.plan.notPerformed}</b><span>No realizadas</span></div>
+            <div><b>{s.plan.pending}</b><span>Pendientes</span></div>
+          </div>
+          <p style={{ margin: '8px 0 0' }}>
+            <span className="chip ok">{Math.round(s.plan.coverage * 100)}% del plan</span>{' '}
+            <span className="chip">{s.plan.planned} celdas planificadas</span>
+            {s.plan.offPlan.length > 0 && (
+              <> <span className="chip warn">{s.plan.offPlan.length} muestreo(s) fuera del plan</span></>
+            )}
+          </p>
+          {s.plan.notPerformed > 0 && (
+            <ul className="issues" style={{ marginTop: 8 }}>
+              {s.plan.rows.filter((r) => r.state === 'no realizado').slice(0, 8).map((r) => (
+                <li key={`${r.station.id}-${r.method}`}>
+                  <b>{r.station.stationCode}</b> · {METHOD_LABEL[r.method]} — no se realizó
+                  {r.reason ? `: ${r.reason}` : ' (sin motivo declarado)'}
+                </li>
+              ))}
+            </ul>
+          )}
+          {pendingRows.length > 0 && (
+            <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>
+              Falta: {pendingRows.slice(0, 10).map((r) => `${r.station.stationCode} (${METHOD_LABEL[r.method]})`).join(', ')}
+              {pendingRows.length > 10 ? `… y ${pendingRows.length - 10} más` : ''}
+            </p>
+          )}
+        </section>
+      )}
 
       <section className="card">
         <h2>Pendientes</h2>
@@ -225,6 +264,8 @@ export function Resumen() {
             const template = s.templates.find((t) => t.id === s.templateId) ?? s.templates[0];
             const wb = buildWorkbook(records, template, {
               events,
+              // Sin las estaciones no hay plan: la hoja saldría sólo con lo hecho.
+              stations: s.stations.filter((st) => st.projectId === s.projectId),
               placeholders: {
                 cliente: project?.client ?? '', proyecto: project?.name ?? '',
                 codigo: project?.code ?? '', evaluador: s.session.userName,

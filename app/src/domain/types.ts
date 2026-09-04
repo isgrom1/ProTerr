@@ -69,6 +69,13 @@ export type MethodCode =
   | 'trampa_sherman'
   | 'songmeter'
   | 'transito_aereo'
+  /**
+   * MTAN: monitoreo de tránsito aéreo NOCTURNO, con visor nocturno y detector.
+   * No es el diurno con otro horario: cambia lo que se puede observar (la
+   * altura se estima contra una referencia, no se mide) y se trabaja por
+   * bloque horario, no por punto de observación continuo.
+   */
+  | 'transito_aereo_nocturno'
   | 'punto_conteo'
   | 'atropello'
   /** Fuera de estación: en tránsito entre estaciones, en campamento, en ruta. */
@@ -217,6 +224,8 @@ export interface SamplingEvent extends Auditable {
   recordedBy?: string | null;
   /** Cuadrilla o equipo de terreno ("Equipo 3"), distinto del observador. */
   team?: string | null;
+  /** Bloque horario del turno nocturno ("21:00 - 03:00"). */
+  timeBlock?: string | null;
   weather?: string | null;
   notes?: string | null;
   /** Posición del dispositivo al abrir el evento; NO es la posición de la estación. */
@@ -249,6 +258,14 @@ export interface SamplingEvent extends Auditable {
    * es un dato (ausencia), no una omisión, y se exporta como tal.
    */
   noDetections?: boolean;
+  /**
+   * ¿Se hizo el muestreo? `false` es un dato, no un vacío: la estación estaba
+   * planificada y no se pudo hacer. Es distinto de `noDetections`, que es
+   * "fui, recorrí y no había nada".
+   */
+  performed?: boolean | null;
+  /** Por qué no se realizó ("sin acceso", "camino cortado", "lluvia"). */
+  notPerformedReason?: string | null;
   /** Registro fuera de estación (metodología 'registro_oportunista'). */
   incidental?: boolean;
 }
@@ -392,6 +409,14 @@ export interface AerialTransit {
   flightDirection?: string | null;
   flightHeightCategory?: string | null; // 1..5 según la planilla
   flightHeightMeters?: number | null;
+  /**
+   * Contra qué se estimó la altura ("sobre el cerro", "bajo la torre"). De
+   * noche no se mide: se compara con algo que se ve, y sin decir con qué el
+   * número no significa nada.
+   */
+  heightReference?: string | null;
+  /** Tipo de vuelo: directo, en círculos, en percha, migratorio. */
+  flightType?: string | null;
 }
 
 export interface Identification extends Auditable {

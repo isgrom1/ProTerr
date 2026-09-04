@@ -16,7 +16,7 @@ export type RequirableField =
   | 'occurrenceCoordinates' | 'flightDirection' | 'flightHeight' | 'flightOrigin'
   | 'flightDestination' | 'playbackResponse'
   | 'effort' | 'conditions' | 'detectionDistance' | 'organismId' | 'trapNumber'
-  | 'reproductiveCondition';
+  | 'reproductiveCondition' | 'flightHeightReference' | 'flightType' | 'timeBlock';
 
 export type Requirement = 'required' | 'recommended' | 'optional' | 'hidden';
 
@@ -82,6 +82,10 @@ export const DEFAULT_PROFILE: RequirementProfile = {
     flightHeight: 'hidden',
     flightOrigin: 'hidden',
     flightDestination: 'hidden',
+    // Sólo el monitoreo aéreo nocturno los usa.
+    flightHeightReference: 'hidden',
+    flightType: 'hidden',
+    timeBlock: 'hidden',
     playbackResponse: 'hidden',
   },
   overridesByMethod: {
@@ -102,6 +106,22 @@ export const DEFAULT_PROFILE: RequirementProfile = {
       flightDirection: 'required', flightHeight: 'required',
       flightOrigin: 'recommended', flightDestination: 'recommended',
       behaviour: 'recommended', recordType: 'optional',
+    },
+    /**
+     * MTAN. De noche no se mide la altura: se estima contra algo que se ve,
+     * así que la referencia es tan obligatoria como el número. Y no hay
+     * "punto de observación" continuo: se trabaja por bloque horario.
+     */
+    transito_aereo_nocturno: {
+      taxon: 'required', individualCount: 'required',
+      flightDirection: 'required', flightHeight: 'recommended',
+      flightHeightReference: 'required', flightType: 'recommended',
+      timeBlock: 'required', conditions: 'recommended',
+      recordType: 'optional', effort: 'recommended',
+      // De noche casi todo es auditivo o una silueta: pedir sexo o edad
+      // es pedir que se invente.
+      sex: 'hidden', lifeStage: 'hidden', behaviour: 'hidden',
+      flightOrigin: 'optional', flightDestination: 'optional',
     },
     camara_trampa: {
       taxon: 'required', eventDate: 'required', eventTime: 'required',

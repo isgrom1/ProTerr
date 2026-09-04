@@ -25,6 +25,7 @@ import { suggestStations, type StationSuggestion } from '../geo/stations';
 import { toUtm } from '../geo/utm';
 import { parseCommand, type VoiceCommand } from '../nlp/commands';
 import { parseUtterance, type ParsedHeader, type ParsedObservation } from '../nlp/parser';
+import { summarizePlan, type PlanSummary } from '../plan/coverage';
 import { TaxonIndex } from '../nlp/taxonIndex';
 import { syncOutbox, syncStatus, type SyncStatus, type SyncTransport } from '../sync/engine';
 import { validateDraft, whatIsMissing, type ValidationResult } from '../validation/engine';
@@ -112,6 +113,10 @@ interface State {
   /** Cierra el muestreo abierto y congela su esfuerzo. */
   /** Abre o completa la cabecera del punto dictada al llegar. */
   applyPointHeader(header: ParsedHeader): Promise<void>;
+  /** Deja constancia de que la estación planificada no se pudo hacer. */
+  recordNotPerformed(reason?: string | null): Promise<void>;
+  /** Cobertura del plan: qué se hizo, qué no se pudo y qué falta. */
+  plan: PlanSummary | null;
   closeEffort(extra?: { distanceMeters?: number; trapCount?: number; trapNights?: number; noDetections?: boolean }): Promise<void>;
   /** Recorrido explícito: nada se graba sin que el usuario lo pida. */
   beginTrack(): Promise<void>;
@@ -191,6 +196,7 @@ export const useStore = create<State>((set, get) => ({
   templates: [NATIVE_TEMPLATE],
   templateId: NATIVE_TEMPLATE.id,
   projectId: null, campaignId: null, stationId: null, method: null, stationConfirmed: false,
+  plan: null,
   fix: null, gpsError: null, suggestions: [],
   drafts: [], validations: {}, lastUtterance: null,
   records: [], sync: { pending: 0, errored: 0, conflicts: 0 },
@@ -219,6 +225,7 @@ export const useStore = create<State>((set, get) => ({
     });
     await get().refreshRecords();
     await refreshActiveEvent(set, get);
+    await refreshPlan(set, get);
   },
 
   setScreen(screen) { set({ screen }); },
@@ -237,6 +244,7 @@ export const useStore = create<State>((set, get) => ({
       stationId: patch.projectId && patch.projectId !== s.projectId ? null : (patch.stationId ?? s.stationId),
     }));
     void refreshActiveEvent(set, get);
+    void refreshPlan(set, get);
   },
 
   async requestGps() {
@@ -403,6 +411,7 @@ export const useStore = create<State>((set, get) => ({
     });
     await get().refreshRecords();
     await refreshActiveEvent(set, get);
+    await refreshPlan(set, get);
     set({ sync: await syncStatus() });
     get().notify(saved === 1 ? 'Registro guardado.' : `${saved} registros guardados.`);
   },
@@ -603,6 +612,27 @@ export const useStore = create<State>((set, get) => ({
     if (hechos.length) get().notify(`Cabecera del punto: ${hechos.join(', ')}.`);
   },
 
+  /**
+   * "No se realizó, camino cortado". La estación estaba en el plan y no se
+   * pudo hacer: eso es un dato de cobertura, no un hueco. Distinto de
+   * `recordNoDetections`, donde sí se recorrió.
+   */
+  async recordNotPerformed(reason) {
+    const event = await ensureEvent(set, get);
+    if (!event) return;
+    await applyEventPatch(
+      event.id,
+      { performed: false, notPerformedReason: reason?.trim() || null, endedAt: new Date().toISOString() },
+      get().session,
+      'Muestreo no realizado',
+    );
+    await refreshActiveEvent(set, get);
+    await refreshPlan(set, get);
+    get().notify(reason
+      ? `Anotado: no se realizó (${reason}).`
+      : 'Anotado: no se realizó. Conviene decir por qué.');
+  },
+
   async recordNoDetections() {
     const { projectId, campaignId, stationId, method, session, projects, fix } = get();
     const project = projects.find((p) => p.id === projectId);
@@ -622,8 +652,9 @@ export const useStore = create<State>((set, get) => ({
       },
       session,
     );
-    await applyEventPatch(event.id, { noDetections: true }, session, 'Muestreo sin detecciones');
+    await applyEventPatch(event.id, { noDetections: true, performed: true }, session, 'Muestreo sin detecciones');
     await refreshActiveEvent(set, get);
+    await refreshPlan(set, get);
     get().notify('Anotado: muestreo sin detecciones. La ausencia también es un dato.');
   },
 
@@ -763,6 +794,14 @@ async function ensureSite(
   await db.stations.put({ ...station, sites: [...station.sites, site] });
   set({ stations: await db.stations.toArray() });
   return site.id;
+}
+
+/** Recalcula la cobertura del plan con lo que hay guardado. */
+async function refreshPlan(set: (partial: Partial<State>) => void, get: () => State): Promise<void> {
+  const { projectId, campaignId, stations } = get();
+  if (!projectId) { set({ plan: null }); return; }
+  const events = await db.events.toArray();
+  set({ plan: summarizePlan(stations, events, { projectId, campaignId }) });
 }
 
 /**

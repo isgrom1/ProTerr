@@ -98,6 +98,9 @@ function valueOf(draft: ObservationDraft, field: RequirableField): unknown {
     case 'weather': return draft.weather;
     case 'trapNumber': return draft.trapNumber;
     case 'reproductiveCondition': return draft.reproductiveCondition;
+    case 'flightHeightReference': return draft.aerial?.heightReference ?? null;
+    case 'flightType': return draft.aerial?.flightType ?? null;
+    case 'timeBlock': return draft.timeBlock ?? null;
     case 'taxon': return draft.taxonId;
     case 'recordType': return draft.recordTypeInferred ? null : draft.recordType;
     case 'individualCount': return draft.individualCount;
@@ -127,6 +130,8 @@ const LABELS: Record<RequirableField, string> = {
   eventDate: 'Fecha', eventTime: 'Hora', station: 'Estación', method: 'Metodología',
   recordedBy: 'Observador', weather: 'Clima', taxon: 'Especie', trapNumber: 'N° de trampa',
   reproductiveCondition: 'Condición reproductiva',
+  flightHeightReference: 'Referencia de altura', flightType: 'Tipo de vuelo',
+  timeBlock: 'Bloque horario',
   recordType: 'Tipo de registro', individualCount: 'Abundancia', sex: 'Sexo',
   lifeStage: 'Estado de desarrollo', organismCondition: 'Estado del organismo',
   behaviour: 'Comportamiento', notes: 'Observaciones', photos: 'Fotografías',
@@ -319,7 +324,7 @@ export function validateDraft(draft: ObservationDraft, ctx: ValidationContext): 
     });
   }
 
-  if (draft.aerial && draft.method !== 'transito_aereo') {
+  if (draft.aerial && draft.method !== 'transito_aereo' && draft.method !== 'transito_aereo_nocturno') {
     issues.push({
       field: 'consistency', severity: 'info', level: 'occurrence',
       message: 'Se capturaron datos de vuelo fuera de la metodología de tránsito aéreo; se guardarán como hechos asociados.',
