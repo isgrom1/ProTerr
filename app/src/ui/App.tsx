@@ -9,11 +9,13 @@ import { Terreno } from './screens/Terreno';
 // mano, arranque liviana. Una vez visitadas quedan en la caché del service worker.
 const Resumen = lazy(() => import('./screens/Resumen').then((m) => ({ default: m.Resumen })));
 const Ajustes = lazy(() => import('./screens/Ajustes').then((m) => ({ default: m.Ajustes })));
+const Jornada = lazy(() => import('./screens/Jornada').then((m) => ({ default: m.Jornada })));
 
 const TABS: Array<{ id: Screen; label: string; glyph: string }> = [
   { id: 'terreno', label: 'Terreno', glyph: '🎙️' },
   { id: 'confirmar', label: 'Confirmar', glyph: '✅' },
   { id: 'registros', label: 'Registros', glyph: '📋' },
+  { id: 'jornada', label: 'Jornada', glyph: '📷' },
   { id: 'resumen', label: 'Resumen', glyph: '📊' },
   { id: 'ajustes', label: 'Ajustes', glyph: '⚙️' },
 ];
@@ -40,6 +42,7 @@ export function App() {
         {s.screen === 'confirmar' && <Confirmar />}
         {s.screen === 'registros' && <Registros />}
         <Suspense fallback={<p className="muted">Cargando…</p>}>
+          {s.screen === 'jornada' && <Jornada />}
           {s.screen === 'resumen' && <Resumen />}
           {s.screen === 'ajustes' && <Ajustes />}
         </Suspense>

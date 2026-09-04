@@ -324,6 +324,76 @@ Orientation             3 = rotada 180 grados
 Si el navegador no puede decodificar la imagen, se guarda tal cual: perder la
 foto sería mucho peor que guardarla pesada.
 
+## J.15 Las estaciones salen del KMZ del proyecto
+
+**El problema.** El proyecto llega con un KMZ del cliente que ya trae todos los
+puntos de muestreo. Cargarlos en la app significaba transcribir decenas de
+coordenadas a mano.
+
+**Lo implementado** (`app/src/geo/kml.ts`). Se carga el KML o el KMZ, se listan
+los puntos y se eligen cuáles usar:
+
+- **KMZ descomprimido sin dependencias**, con `DecompressionStream` sobre un
+  lector de zip de unas 60 líneas: el KMZ es un zip con un solo archivo dentro y
+  no vale la pena engordar el paquete que se descarga antes de salir a terreno.
+- **Prefijo configurable**: los archivos suelen nombrar los puntos `PM01` y el
+  equipo trabajar con `PMF01`.
+- **Nombres repetidos marcados**: un KML de proyecto real suele traer algún
+  punto duplicado; se avisa en vez de perder uno.
+- **Transectos dibujados como línea** aportan además inicio, fin y longitud.
+- Volver a cargar una estación existente **conserva su identificador**, y con eso
+  los registros que ya la referencian.
+
+## J.16 La etiqueta de la foto que quedó del punto anterior
+
+**El problema, reportado desde terreno.** La app de cámara conserva la etiqueta
+escrita para el punto anterior. Se termina en PMF40, se camina a PMF50, se saca
+la primera foto —normalmente una de orientación— y sale rotulada PMF40. Sin
+cruzarlo con nada, ese error viaja hasta el informe.
+
+**Lo implementado.** La etiqueta se contrasta con el GPS de la propia foto:
+
+| Situación | Qué hace |
+|---|---|
+| Etiqueta y GPS coinciden | la da por buena |
+| Etiqueta a >200 m y hay otra estación más cerca | **avisa**: «traen la etiqueta PMF40, pero el GPS las sitúa en PMF50» |
+| La foto no trae GPS | dice que no se puede verificar; no acusa a nadie |
+| La etiqueta no es de este proyecto | la marca aparte |
+
+**Manda el GPS**, porque es el dato que no se olvida de actualizar. La etiqueta
+queda registrada igual, para poder auditar la discrepancia.
+
+## J.17 Pasar la jornada de una vez
+
+**El problema.** El trabajo lento no es el terreno: es llegar a la casa, ordenar
+las fotos por día, después por punto de muestreo, y recién ahí transcribir la
+planilla.
+
+**Lo implementado** (pestaña **Jornada**). Se seleccionan todas las fotos del
+día y la app hace ese ordenamiento con lo que las fotos ya traen:
+
+```
+   fotos del día
+        ↓
+   agrupadas por día y por punto     (según el GPS de cada foto)
+        ↓
+   orientación separada de especies  (según el rumbo de la cámara)
+        ↓
+   etiquetas desfasadas señaladas
+        ↓
+   se revisa y se guarda por punto
+```
+
+**Cómo separa la orientación de las especies.** En cada punto se toman primero
+las tomas de orientación —una por cada rumbo que pida la consultora— y después
+las de las especies. Se usa esa costumbre: las primeras fotos cuyos rumbos
+apuntan a cuadrantes distintos son la orientación. Es una **propuesta**: cada
+foto se puede reclasificar con un toque, y si los rumbos no cumplen el patrón
+esperado la app prefiere dejarlas sin clasificar antes que clasificarlas mal.
+
+El rumbo del EXIF da además el punto cardinal de cada toma (197° = Sur), así que
+las cuatro quedan identificadas N/E/S/O sin escribir nada.
+
 ---
 
 ## Lo que sigue faltando, y por qué

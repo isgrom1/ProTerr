@@ -9,6 +9,7 @@ import { seedCatalogs } from '../../db/seed';
 import { EXPORT_FIELDS } from '../../export/fields';
 import { toTemplate, detectTemplate, type TemplateDetection } from '../../import/template';
 import { analyzeWorkbook, type ImportPreview } from '../../import/planilla';
+import { readKmlFile, toStationCandidates, type StationCandidate } from '../../geo/kml';
 import { useStore } from '../../state/store';
 import type { MethodCode } from '../../domain/types';
 import { requirementFor, type RequirableField, type Requirement } from '../../validation/profiles';
@@ -36,6 +37,9 @@ export function Ajustes() {
   const [preview, setPreview] = useState<ImportPreview | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const [detection, setDetection] = useState<TemplateDetection | null>(null);
+  const [kml, setKml] = useState<StationCandidate[] | null>(null);
+  const [chosen, setChosen] = useState<Set<string>>(new Set());
+  const [prefix, setPrefix] = useState('');
   const [templateName, setTemplateName] = useState('');
   const [organization, setOrganization] = useState('');
 
@@ -80,6 +84,84 @@ export function Ajustes() {
             );
           })}
         </div>
+      </section>
+
+      {/* El proyecto suele venir con un KMZ que ya trae todos los puntos.
+          Copiarlos a mano sería transcribir decenas de coordenadas. */}
+      <section className="card">
+        <h2>Estaciones desde KML o KMZ</h2>
+        <p className="muted" style={{ fontSize: 13 }}>
+          Carga el archivo de puntos del proyecto y elige cuáles usar. Las coordenadas
+          se convierten al huso del proyecto; los transectos dibujados como línea traen
+          además su inicio y fin.
+        </p>
+        <input type="file" accept=".kml,.kmz"
+          onChange={async (e) => {
+            const file = e.target.files?.[0];
+            if (!file) return;
+            try {
+              const found = toStationCandidates(await readKmlFile(await file.arrayBuffer()));
+              setKml(found);
+              setChosen(new Set(found.map((_, i) => String(i))));
+            } catch (err) {
+              s.notify(err instanceof Error ? err.message : 'No se pudo leer el archivo.', 'error');
+            }
+          }} />
+
+        {kml && (
+          <div style={{ marginTop: 12 }}>
+            <div className="grid2">
+              <div className="field">
+                <label htmlFor="pfx">Prefijo para los códigos</label>
+                <input id="pfx" type="text" value={prefix} placeholder="p. ej. PMF"
+                  onChange={(e) => setPrefix(e.target.value)} />
+              </div>
+              <div className="field">
+                <label>Seleccionadas</label>
+                <div className="row">
+                  <button className="btn ghost" onClick={() => setChosen(new Set(kml.map((_, i) => String(i))))}>Todas</button>
+                  <button className="btn ghost" onClick={() => setChosen(new Set())}>Ninguna</button>
+                </div>
+              </div>
+            </div>
+            <p>
+              <span className="chip ok">{chosen.size} de {kml.length}</span>{' '}
+              {kml.some((c) => c.duplicateName) && (
+                <span className="chip warn">
+                  {new Set(kml.filter((c) => c.duplicateName).map((c) => c.name)).size} nombre(s) repetidos en el archivo
+                </span>
+              )}
+            </p>
+            <ul className="list" style={{ maxHeight: 320, overflowY: 'auto' }}>
+              {kml.map((c, i) => (
+                <li key={i}>
+                  <input type="checkbox" checked={chosen.has(String(i))} onChange={(e) => {
+                    const next = new Set(chosen);
+                    if (e.target.checked) next.add(String(i));
+                    else next.delete(String(i));
+                    setChosen(next);
+                  }} />
+                  <span className="name">
+                    {prefix}{c.name}
+                    {c.duplicateName && <span className="chip warn" style={{ marginLeft: 6, fontSize: 11 }}>repetido</span>}
+                    <div className="muted" style={{ fontSize: 12 }}>
+                      {c.latitude.toFixed(5)}, {c.longitude.toFixed(5)}
+                      {c.lengthMeters ? ` · transecto de ${c.lengthMeters} m` : ''}
+                      {c.folder ? ` · ${c.folder}` : ''}
+                    </div>
+                  </span>
+                </li>
+              ))}
+            </ul>
+            <div className="row">
+              <button className="btn primary" disabled={!chosen.size} onClick={async () => {
+                await s.importStations(kml.filter((_, i) => chosen.has(String(i))), prefix);
+                setKml(null);
+              }}>Cargar {chosen.size} estación(es)</button>
+              <button className="btn ghost" onClick={() => setKml(null)}>Cancelar</button>
+            </div>
+          </div>
+        )}
       </section>
 
       <section className="card">

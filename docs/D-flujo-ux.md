@@ -62,7 +62,7 @@ vuelve a apagarse sola y el GPS se detiene.
 │ 09:02  Picaflor…     Individuo     ●   │
 │ ⚠️ 3 registro(s) sin sincronizar        │
 ├────────────────────────────────────────┤
-│ 🎙️Terreno ✅Confirmar 📋Registros …     │
+│ 🎙️Terreno ✅Confirmar 📋Registros 📷… │
 └────────────────────────────────────────┘
 ```
 
@@ -136,6 +136,13 @@ Cuando lo pide, dice por qué:
 `Registros` agrupa por fecha, con filtro «Sólo con información pendiente».
 Al abrir un registro: editar abundancia/comportamiento/observaciones,
 **Duplicar** (§18) y **Eliminar** (lógico, con auditoría).
+
+## D.5b Pasar la jornada (pestaña Jornada)
+
+Para el trabajo de después del terreno. Se seleccionan todas las fotos del día
+y quedan agrupadas por punto según su GPS, con la orientación separada de las
+especies y las etiquetas desfasadas señaladas. Ver
+[J.17](J-aristas-adicionales.md).
 
 ## D.6 Cierre de jornada
 

@@ -47,7 +47,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 
 .tabs {
   position: fixed; bottom: 0; left: 0; right: 0; display: grid;
-  grid-template-columns: repeat(5, 1fr); background: var(--surface);
+  grid-template-columns: repeat(6, 1fr); background: var(--surface);
   border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom);
   z-index: 6;
 }

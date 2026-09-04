@@ -5,6 +5,7 @@
 import { create } from 'zustand';
 import { db } from '../db/db';
 import { getOrCreateEvent } from '../db/repository';
+import { locationIdFor } from '../db/ids';
 import { uuid } from '../db/ids';
 import { catalogsReady, seedCatalogs } from '../db/seed';
 import {
@@ -29,7 +30,7 @@ import { syncOutbox, syncStatus, type SyncStatus, type SyncTransport } from '../
 import { validateDraft, whatIsMissing, type ValidationResult } from '../validation/engine';
 import { DEFAULT_PROFILE, type RequirementProfile } from '../validation/profiles';
 
-export type Screen = 'terreno' | 'confirmar' | 'registros' | 'resumen' | 'ajustes';
+export type Screen = 'terreno' | 'confirmar' | 'registros' | 'jornada' | 'resumen' | 'ajustes';
 
 export interface RecordRow {
   occurrence: Occurrence;
@@ -120,6 +121,10 @@ interface State {
   refreshQuality(): Promise<void>;
 
   /** Plantillas de exportación por consultora. */
+  /** Carga estaciones desde el KML/KMZ del proyecto. */
+  importStations(candidates: Array<{ name: string; latitude: number; longitude: number;
+    end?: { latitude: number; longitude: number } | null }>, prefix?: string): Promise<number>;
+
   selectTemplate(id: string): void;
   saveTemplate(template: ExportTemplate): Promise<void>;
   deleteTemplate(id: string): Promise<void>;
@@ -563,6 +568,49 @@ export const useStore = create<State>((set, get) => ({
     await applyEventPatch(event.id, { noDetections: true }, session, 'Muestreo sin detecciones');
     await refreshActiveEvent(set, get);
     get().notify('Anotado: muestreo sin detecciones. La ausencia también es un dato.');
+  },
+
+  async importStations(candidates, prefix = '') {
+    const { projectId, projects, session } = get();
+    const project = projects.find((p) => p.id === projectId);
+    if (!project) { get().notify('Selecciona un proyecto antes de importar.', 'warn'); return 0; }
+
+    const existing = new Map(get().stations.map((st) => [st.stationCode.toLowerCase(), st]));
+    const stations: Station[] = [];
+    for (const c of candidates) {
+      const code = `${prefix}${c.name}`.trim();
+      if (!code) continue;
+      const utm = toUtm(c.latitude, c.longitude, project.utmZone);
+      const previous = existing.get(code.toLowerCase());
+      const end = c.end ? toUtm(c.end.latitude, c.end.longitude, project.utmZone) : null;
+      stations.push({
+        // Actualizar una estación existente conserva su id, y con eso los
+        // registros que ya la referencian.
+        id: previous?.id ?? `st_${code.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
+        projectId: project.id,
+        stationCode: code,
+        finalStationCode: previous?.finalStationCode ?? code,
+        darwinCoreLocationId: locationIdFor(project.code, code),
+        region: previous?.region ?? project.region ?? null,
+        season: previous?.season ?? null,
+        habitat: previous?.habitat ?? null,
+        slopeAspect: previous?.slopeAspect ?? null,
+        utmEast: utm.east, utmNorth: utm.north,
+        utmStartEast: end ? utm.east : previous?.utmStartEast ?? null,
+        utmStartNorth: end ? utm.north : previous?.utmStartNorth ?? null,
+        utmEndEast: end?.east ?? previous?.utmEndEast ?? null,
+        utmEndNorth: end?.north ?? previous?.utmEndNorth ?? null,
+        latitude: c.latitude, longitude: c.longitude,
+        methods: previous?.methods ?? project.methods.slice(0, 1),
+        sites: previous?.sites ?? [],
+        recordedBy: previous?.recordedBy ?? session.userName,
+        identifiedBy: previous?.identifiedBy ?? null,
+      });
+    }
+    await db.stations.bulkPut(stations);
+    set({ stations: await db.stations.toArray() });
+    get().notify(`${stations.length} estación(es) cargadas desde el archivo.`);
+    return stations.length;
   },
 
   selectTemplate(id) {

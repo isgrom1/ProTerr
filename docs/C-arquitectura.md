@@ -56,8 +56,8 @@
 | NLP | `app/src/nlp/` | Segmentación, léxico, números en español, comandos |
 | Validación | `app/src/validation/` | Perfiles configurables + motor de recordatorios |
 | Voz | `app/src/speech/` | Reconocedor del dispositivo, retroalimentación sonora |
-| Fotografías | `app/src/media/` | Lector de EXIF propio, compresión, orientación |
-| Geo | `app/src/geo/` | UTM ↔ WGS84, sugerencia de estación por cercanía |
+| Fotografías | `app/src/media/` | Lector de EXIF propio, compresión, agrupación de la jornada |
+| Geo | `app/src/geo/` | UTM ↔ WGS84, lectura de KML/KMZ, sugerencia de estación |
 | Esfuerzo | `app/src/effort/` | Track explícito, waypoints, abundancia relativa (opt-in) |
 | Conservación | `app/src/conservation/` | Categorías RCE/UICN, endemismo, movilidad, especies sensibles |
 | Calidad | `app/src/quality/` | Duplicados, vacíos de esfuerzo, tabla de especies |
@@ -66,7 +66,7 @@
 | Exportación | `app/src/export/` | Catálogo de campos, plantillas por consultora, CSV, Darwin Core Archive |
 | Importación | `app/src/import/` | Detección de plantillas ajenas y de datos históricos |
 | Estado | `app/src/state/` | Store delgado; la verdad está en IndexedDB |
-| UI | `app/src/ui/` | 5 pantallas optimizadas para terreno |
+| UI | `app/src/ui/` | 6 pantallas optimizadas para terreno |
 | Catálogos | `tools/` | CSV propios → semillas JSON, reproducible |
 
 ## C.3 Decisiones y por qué

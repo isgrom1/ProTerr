@@ -57,7 +57,7 @@ Cada organización carga sus propios catálogos y su propio formulario. Ver
 ```bash
 cd app
 npm install
-npm test        # 221 pruebas
+npm test        # 240 pruebas
 npm run dev     # http://localhost:5173
 npm run build   # PWA instalable en dist/
 ```
@@ -82,12 +82,13 @@ app/src/
   nlp/          parser en español, léxico, números, comandos, índice taxonómico
   validation/   perfiles configurables + motor de recordatorios
   speech/       reconocimiento de voz del dispositivo
-  geo/          UTM ↔ WGS84, sugerencia de estación
+  geo/          UTM ↔ WGS84, lectura de KML/KMZ, sugerencia de estación
+  media/        lector de EXIF, compresión y agrupación de la jornada
   sync/         cola, reintentos con espera creciente, conflictos
   export/       catálogo de campos · plantillas · CSV · Darwin Core Archive
   import/       detección de plantillas ajenas y de datos históricos
   state/        store (la verdad está en IndexedDB)
-  ui/           5 pantallas de terreno
+  ui/           6 pantallas de terreno
 ```
 
 ## Qué hace distinto a un formulario
@@ -107,6 +108,10 @@ app/src/
 - **No pregunta lo que no se puede saber.** Si sólo lo oíste, no te pide qué
   hacía ni si era juvenil. Si te alejaste de la estación seleccionada, te avisa
   antes de guardar.
+- **Pasa la jornada desde las fotos.** Seleccionas las del día y quedan
+  ordenadas por punto según su GPS, con la orientación separada de las especies
+  y las etiquetas desfasadas señaladas.
+- **Las estaciones salen del KMZ del proyecto**, no de transcribir coordenadas.
 - **La foto llena el registro.** Del EXIF salen coordenada (en UTM), hora real,
   rumbo y hasta el código de estación si lo escribiste en la cámara. Se propone;
   tú confirmas.

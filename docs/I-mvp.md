@@ -2,7 +2,7 @@
 
 ## I.1 Qué está construido y funcionando
 
-El MVP **está implementado**, no propuesto. 221 pruebas verdes, `tsc` limpio,
+El MVP **está implementado**, no propuesto. 240 pruebas verdes, `tsc` limpio,
 build de producción y recorrido verificado en navegador con los archivos
 exportados releídos y validados.
 
@@ -20,6 +20,9 @@ exportados releídos y validados.
 | Guardado local inmediato, funcionamiento offline completo | ✅ |
 | Cola de sincronización con reintentos y conflictos | ✅ |
 | Fotografías: EXIF leído (coordenada, hora, rumbo, estación), comprimidas y orientadas | ✅ |
+| Estaciones cargadas desde el KML/KMZ del proyecto | ✅ |
+| Jornada completa importada desde las fotos, agrupada por punto | ✅ |
+| Etiqueta de foto desfasada detectada contra el GPS | ✅ |
 | Revisión, edición, duplicado y borrado lógico | ✅ |
 | Auditoría campo a campo | ✅ |
 | Resumen de jornada | ✅ |
@@ -80,7 +83,7 @@ exportados releídos y validados.
 ```bash
 cd app
 npm install
-npm test          # 221 pruebas
+npm test          # 240 pruebas
 npm run dev       # http://localhost:5173
 ```
 
