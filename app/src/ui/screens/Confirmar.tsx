@@ -12,7 +12,8 @@ import { preparePhoto, suggestionFrom, type PhotoSuggestion } from '../../media/
 import { attachMedia } from '../../db/repository';
 import type { ObservationDraft } from '../../domain/draft';
 import { useStore } from '../../state/store';
-import { requirementFor } from '../../validation/profiles';
+import { recordTypeOptions } from '../../validation/methodFields';
+import { requirementFor, type RequirableField } from '../../validation/profiles';
 import { METHOD_LABELS } from './Terreno';
 
 const hoy = () => new Date().toISOString().slice(0, 10);
@@ -20,10 +21,15 @@ const hoy = () => new Date().toISOString().slice(0, 10);
 /** Patrón de vuelo, tal como se anota en el monitoreo nocturno. */
 const TIPO_VUELO = ['Directo', 'En círculos', 'Ascendente', 'Descendente', 'Migratorio', 'Percha a percha'];
 
-/** Vocabulario por defecto; una plantilla puede traer el suyo. */
+/**
+ * Vocabulario por defecto; una plantilla puede traer el suyo. Incluye
+ * "Adulto sin signos reproductivos": en trampeo casi siempre es la respuesta
+ * correcta, y sin esa opción se deja el campo vacío, que no es lo mismo.
+ */
 const REPRODUCTIVA = [
-  'No registrada', 'Hembra con crías', 'Macho con crías', 'Hembra en celo',
-  'Hembra preñada', 'Empollando', 'En cortejo', 'Nido activo',
+  'Adulto sin signos reproductivos', 'No registrada',
+  'Hembra con crías', 'Macho con crías', 'Hembra en celo', 'Hembra preñada',
+  'Testículos escrotados', 'Empollando', 'En cortejo', 'Nido activo', 'Juvenil',
 ];
 
 export function Confirmar() {
@@ -78,8 +84,13 @@ function DraftCard({ draft, index }: { draft: ObservationDraft; index: number })
   // trampeo, igual que el origen del vuelo sólo existe en tránsito aéreo.
   const isTrapping = draft.method === 'trampa_sherman' || draft.method === 'camara_trampa';
   const sites = (station?.sites ?? []).filter((site) => site.kind === draft.method);
-  // Con crías, en celo, empollando: sólo tiene sentido si se vio al animal.
-  const pideReproductiva = requirementFor(s.profile, 'reproductiveCondition', {
+  /**
+   * Un campo que la metodología no permite observar no se dibuja. En una
+   * trampa Sherman no hay distancia de detección —el animal está adentro— y
+   * pedir conducta es pedir que se invente. El perfil ya lo dice; la ficha
+   * tiene que obedecerle en vez de mostrarlo todo siempre.
+   */
+  const visible = (field: RequirableField) => requirementFor(s.profile, field, {
     method: draft.method, recordType: draft.recordType ?? undefined,
   }) !== 'hidden';
 
@@ -201,26 +212,38 @@ function DraftCard({ draft, index }: { draft: ObservationDraft; index: number })
           <div className="grid2">
             <Field label="Fecha"><input type="date" value={draft.eventDate ?? ''} onChange={(e) => patch({ eventDate: e.target.value })} /></Field>
             <Field label="Hora"><input type="time" value={draft.eventTime ?? ''} onChange={(e) => patch({ eventTime: e.target.value })} /></Field>
-            <Field label="Tipo de registro">
-              <Select value={draft.recordType ?? ''} options={vocab.recordType ?? []}
-                onChange={(v) => patch({ recordType: v as never, recordTypeInferred: false })} />
-            </Field>
+            {visible('recordType') && (
+              <Field label="Tipo de registro">
+                {/* Sólo las evidencias que esa metodología puede producir: una
+                    trampa Sherman no entrega huellas ni egagrópilas. */}
+                <Select value={draft.recordType ?? ''} options={recordTypeOptions(draft.method, vocab.recordType)}
+                  onChange={(v) => patch({ recordType: v as never, recordTypeInferred: false })} />
+              </Field>
+            )}
             <Field label="Abundancia">
               <input type="number" min={0} value={draft.individualCount ?? ''}
                 onChange={(e) => patch({ individualCount: e.target.value === '' ? null : Number(e.target.value), countInferred: false })} />
             </Field>
-            <Field label="Sexo">
-              <Select value={draft.sex ?? ''} options={vocab.sex ?? []} onChange={(v) => patch({ sex: v as never, sexScope: 'todos' })} />
-            </Field>
-            <Field label="Estado de desarrollo">
-              <Select value={draft.lifeStage ?? ''} options={vocab.lifeStage ?? []} onChange={(v) => patch({ lifeStage: v as never, lifeStageScope: 'todos' })} />
-            </Field>
-            <Field label="Estado del organismo">
-              <Select value={draft.organismCondition ?? ''} options={vocab.organismCondition ?? []} onChange={(v) => patch({ organismCondition: v as never })} />
-            </Field>
-            <Field label="Comportamiento">
-              <Select value={draft.behaviour ?? ''} options={vocab.behaviour ?? []} onChange={(v) => patch({ behaviour: v })} />
-            </Field>
+            {visible('sex') && (
+              <Field label="Sexo">
+                <Select value={draft.sex ?? ''} options={vocab.sex ?? []} onChange={(v) => patch({ sex: v as never, sexScope: 'todos' })} />
+              </Field>
+            )}
+            {visible('lifeStage') && (
+              <Field label="Estado de desarrollo">
+                <Select value={draft.lifeStage ?? ''} options={vocab.lifeStage ?? []} onChange={(v) => patch({ lifeStage: v as never, lifeStageScope: 'todos' })} />
+              </Field>
+            )}
+            {visible('organismCondition') && (
+              <Field label="Estado del organismo">
+                <Select value={draft.organismCondition ?? ''} options={vocab.organismCondition ?? []} onChange={(v) => patch({ organismCondition: v as never })} />
+              </Field>
+            )}
+            {visible('behaviour') && (
+              <Field label="Comportamiento">
+                <Select value={draft.behaviour ?? ''} options={vocab.behaviour ?? []} onChange={(v) => patch({ behaviour: v })} />
+              </Field>
+            )}
             <Field label="Confianza de la identificación">
               <select value={draft.identificationConfidence}
                 onChange={(e) => patch({ identificationConfidence: e.target.value as never })}>
@@ -229,21 +252,25 @@ function DraftCard({ draft, index }: { draft: ObservationDraft; index: number })
                 <option value="posible">Posible (?)</option>
               </select>
             </Field>
-            <Field label="Distancia de detección (m)">
-              <input type="number" min={0} value={draft.detectionDistanceMeters ?? ''}
-                onChange={(e) => patch({ detectionDistanceMeters: e.target.value === '' ? null : Number(e.target.value) })} />
-            </Field>
-            {pideReproductiva && (
+            {visible('detectionDistance') && (
+              <Field label="Distancia de detección (m)">
+                <input type="number" min={0} value={draft.detectionDistanceMeters ?? ''}
+                  onChange={(e) => patch({ detectionDistanceMeters: e.target.value === '' ? null : Number(e.target.value) })} />
+              </Field>
+            )}
+            {visible('reproductiveCondition') && (
               <Field label="Condición reproductiva">
                 <Select value={draft.reproductiveCondition ?? ''}
                   options={vocab.reproductiveCondition ?? REPRODUCTIVA}
                   onChange={(v) => patch({ reproductiveCondition: v || null })} />
               </Field>
             )}
-            <Field label="Código del individuo">
-              <input type="text" value={draft.organismId ?? ''} placeholder="marca, anillo, chip"
-                onChange={(e) => patch({ organismId: e.target.value || null })} />
-            </Field>
+            {visible('organismId') && (
+              <Field label="Código del individuo">
+                <input type="text" value={draft.organismId ?? ''} placeholder="marca, anillo, chip"
+                  onChange={(e) => patch({ organismId: e.target.value || null })} />
+              </Field>
+            )}
           </div>
 
           {/* Trampeo: dónde cayó el animal. La línea es el sitio dentro de la

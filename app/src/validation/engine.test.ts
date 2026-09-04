@@ -190,9 +190,41 @@ describe('aristas nuevas', () => {
     expect(r.issues.some((i) => i.field === 'effort')).toBe(false);
   });
 
-  it('un punto de conteo recomienda la distancia de detección; un transecto no la muestra', () => {
+  it('la distancia de detección sólo existe donde se puede medir', () => {
+    // Un punto de conteo sin distancia no permite estimar densidad; en un
+    // transecto se puede anotar pero nadie la mide siempre. En trampeo,
+    // cámara o grabadora no hay nada que medir: el animal está en la trampa,
+    // la cámara dispara a distancia fija y la grabadora no ve.
     expect(requirementFor(DEFAULT_PROFILE, 'detectionDistance', { method: 'punto_conteo' })).toBe('recommended');
-    expect(requirementFor(DEFAULT_PROFILE, 'detectionDistance', { method: 'transecto' })).toBe('hidden');
+    expect(requirementFor(DEFAULT_PROFILE, 'detectionDistance', { method: 'transecto' })).toBe('optional');
+    for (const m of ['trampa_sherman', 'camara_trampa', 'songmeter', 'atropello'] as const) {
+      expect(requirementFor(DEFAULT_PROFILE, 'detectionDistance', { method: m })).toBe('hidden');
+    }
+  });
+
+  it('no se pide conducta donde no hay conducta que describir', () => {
+    // En la trampa la conducta es estar capturado; atropellado, estar muerto.
+    for (const m of ['trampa_sherman', 'atropello', 'songmeter'] as const) {
+      expect(requirementFor(DEFAULT_PROFILE, 'behaviour', { method: m })).toBe('hidden');
+    }
+    expect(requirementFor(DEFAULT_PROFILE, 'behaviour', { method: 'camara_trampa' })).toBe('recommended');
+  });
+
+  it('el tipo de registro no reabre lo que la metodología cerró', () => {
+    // Un individuo en una trampa Sherman sigue siendo un individuo, pero no
+    // por eso hay conducta que describir: está capturado.
+    expect(requirementFor(DEFAULT_PROFILE, 'behaviour', {
+      method: 'trampa_sherman', recordType: 'Individuo',
+    })).toBe('hidden');
+    // Y en un transecto, el mismo individuo sí la tiene.
+    expect(requirementFor(DEFAULT_PROFILE, 'behaviour', {
+      method: 'transecto', recordType: 'Individuo',
+    })).toBe('recommended');
+  });
+
+  it('el estado reproductivo se pide donde se tiene al animal en la mano', () => {
+    expect(requirementFor(DEFAULT_PROFILE, 'reproductiveCondition', { method: 'trampa_sherman' })).toBe('recommended');
+    expect(requirementFor(DEFAULT_PROFILE, 'reproductiveCondition', { method: 'camara_trampa' })).toBe('hidden');
   });
 
   it('el registro oportunista no exige estación pero sí coordenadas', () => {

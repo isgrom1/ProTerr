@@ -92,6 +92,8 @@ export const DEFAULT_PROFILE: RequirementProfile = {
     transecto: {
       station: 'required', taxon: 'required', individualCount: 'required',
       recordType: 'required', eventTime: 'required', recordedBy: 'required',
+      // Sirve para estimar densidad si se quiere, pero nadie la mide siempre.
+      detectionDistance: 'optional',
     },
     playback_aves: {
       taxon: 'required', playbackResponse: 'required', recordType: 'required',
@@ -129,14 +131,28 @@ export const DEFAULT_PROFILE: RequirementProfile = {
       trapNumber: 'optional',
       // La foto permite describir conducta y edad, igual que un avistamiento.
       behaviour: 'recommended', lifeStage: 'recommended',
+      // La cámara dispara a una distancia fija: medirla no aporta nada.
+      detectionDistance: 'hidden',
+      // Nadie tuvo al animal en la mano.
+      organismId: 'hidden', reproductiveCondition: 'hidden',
     },
+    /**
+     * El animal está en la mano: se ve el sexo, la edad y el estado
+     * reproductivo mejor que en cualquier otra metodología. Pero está DENTRO
+     * de una trampa: no hay distancia de detección que medir ni conducta que
+     * describir, salvo la de estar capturado.
+     */
     trampa_sherman: {
       taxon: 'required', individualCount: 'required', sex: 'recommended',
       lifeStage: 'recommended', occurrenceCoordinates: 'recommended',
+      reproductiveCondition: 'recommended',
       // En trampeo el individuo se marca: sin código no hay recaptura.
       organismId: 'recommended',
       // Sin la trampa, el registro pierde el detalle que hace útil la línea.
       trapNumber: 'recommended',
+      detectionDistance: 'hidden',
+      behaviour: 'hidden',
+      recordType: 'optional',
     },
     punto_conteo: {
       taxon: 'required', individualCount: 'required', recordType: 'required',
@@ -148,10 +164,18 @@ export const DEFAULT_PROFILE: RequirementProfile = {
       taxon: 'required', occurrenceCoordinates: 'required',
       station: 'optional', individualCount: 'recommended',
     },
-    songmeter: { taxon: 'required', recordType: 'required', individualCount: 'recommended' },
+    songmeter: {
+      taxon: 'required', recordType: 'required', individualCount: 'recommended',
+      // Una grabadora fija no ve nada: sólo queda el audio.
+      sex: 'hidden', lifeStage: 'hidden', behaviour: 'hidden',
+      detectionDistance: 'hidden', organismId: 'hidden', reproductiveCondition: 'hidden',
+    },
     atropello: {
       taxon: 'required', organismCondition: 'required',
       occurrenceCoordinates: 'required', photos: 'recommended',
+      // Está muerto en la ruta: no hay conducta ni distancia de detección.
+      behaviour: 'hidden', detectionDistance: 'hidden',
+      sex: 'optional', lifeStage: 'optional',
     },
   },
   /**
@@ -226,11 +250,17 @@ export function requirementFor(
   if (ctx.group && profile.overridesByGroup?.[ctx.group as 'aves']?.[field]) {
     value = profile.overridesByGroup[ctx.group as 'aves']![field]!;
   }
+  let cerradoPorMetodo = false;
   if (ctx.method && profile.overridesByMethod?.[ctx.method]?.[field]) {
     value = profile.overridesByMethod[ctx.method]![field]!;
+    cerradoPorMetodo = value === 'hidden';
   }
-  // El tipo de registro manda por último: es el que sabe si hubo un animal.
-  if (ctx.recordType && profile.overridesByRecordType?.[ctx.recordType]?.[field]) {
+  // El tipo de registro afina dentro de lo que la metodología permite: sabe si
+  // hubo un animal o sólo su rastro. Pero NO puede reabrir lo que la
+  // metodología cerró: en una trampa Sherman el registro es un individuo, y
+  // aun así no hay conducta que describir ni distancia que medir. El campo es
+  // imposible por el método, no por el tipo de evidencia.
+  if (!cerradoPorMetodo && ctx.recordType && profile.overridesByRecordType?.[ctx.recordType]?.[field]) {
     value = profile.overridesByRecordType[ctx.recordType]![field]!;
   }
   // Una especie amenazada sube el listón, salvo que el tipo de registro ya
