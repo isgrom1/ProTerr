@@ -88,6 +88,33 @@ tener su formato incorporado.
 El flujo es el de siempre: detectar → validar → mostrar errores → importar sólo
 lo válido. El archivo original nunca se modifica.
 
+## K.6b Lo que se aprendió leyendo planillas ajenas de verdad
+
+Probado contra dos formularios reales de consultoras distintas (un formulario
+de app de terreno con 18 columnas y una planilla de línea base con 6 hojas y
+114 columnas):
+
+- **La instrucción viene dentro del encabezado.** «UTM -E (no modificar)»,
+  «ID. Estación de Muestreo (No modificar)». El emparejador prueba el
+  encabezado tal cual y también sin lo que va entre paréntesis.
+- **«Orden» es el orden de Linneo y también el correlativo de filas.** Si la
+  columna trae puros números no se empareja con taxonomía: una columna vacía es
+  mejor que el número de fila exportado como orden taxonómico.
+- **Un encabezado corto dentro de un alias largo no es evidencia.** «TIPO»
+  (tipo de estación) dejaba de coincidir con «tipo de registro» o con «filo»;
+  ahora se exige que los dos textos se parezcan en largo, no sólo que uno
+  contenga al otro.
+- **Condición reproductiva ≠ estado del organismo.** Se separaron: confundirlas
+  convertía «Hembra con crías» en «Vivo».
+- **Campos que faltaban y sí aparecen en terreno**: sector o localidad dentro
+  del proyecto, equipo o cuadrilla, etapa de vida, ID de técnica (el punto o
+  línea dentro de la estación).
+
+Resultado medido: el formulario de 18 columnas queda con **0 columnas sin
+emparejar**; la planilla de 114, con 28 —y las que quedan son hojas de otra
+cosa (cavidades, hallazgos) o preguntas de operación («¿se realizó?»,
+«¿por qué no?») que ProTerr todavía no modela.
+
 ## K.7 El formato nativo
 
 `NATIVE_TEMPLATE` es la plantilla que trae ProTerr, y es una plantilla más:

@@ -96,6 +96,8 @@ export interface Station {
   /** dwc:locationID — se genera aquí, no se deja vacío como en la planilla. */
   darwinCoreLocationId: string;
   region?: string | null;
+  /** Sector o localidad dentro del proyecto ("Mejillones", "Mina"). */
+  sector?: string | null;
   season?: string | null;
   habitat?: string | null;
   slopeAspect?: string | null;
@@ -213,6 +215,8 @@ export interface SamplingEvent extends Auditable {
   /** true si el usuario editó manualmente fecha/hora (registro diferido). */
   dateTimeEditedByUser: boolean;
   recordedBy?: string | null;
+  /** Cuadrilla o equipo de terreno ("Equipo 3"), distinto del observador. */
+  team?: string | null;
   weather?: string | null;
   notes?: string | null;
   /** Posición del dispositivo al abrir el evento; NO es la posición de la estación. */
@@ -361,6 +365,12 @@ export interface Occurrence extends Auditable {
    * `siteId`; esto es la trampa concreta donde cayó el animal.
    */
   trapNumber?: string | null;
+  /**
+   * dwc:reproductiveCondition. No es el estado del organismo (vivo/muerto):
+   * es si estaba con crías, en celo, empollando. Varias consultoras lo piden
+   * en columna propia y confundirlos arruina el dato.
+   */
+  reproductiveCondition?: string | null;
 
   // --- Flujo de revisión en gabinete ---
   reviewState?: ReviewState;

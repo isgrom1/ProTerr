@@ -21,7 +21,7 @@ export interface KmlPlacemark {
   description: string | null;
   /** Carpeta del KML, que suele agrupar por tipo de punto. */
   folder: string | null;
-  kind: 'punto' | 'linea';
+  kind: 'punto' | 'linea' | 'area';
   points: KmlPoint[];
   timestamp: string | null;
 }
@@ -41,9 +41,12 @@ export function parseKml(xml: string): KmlPlacemark[] {
   // funcione fuera del navegador (pruebas, herramientas).
   for (const { body, folder } of eachPlacemark(xml)) {
     const name = tag(body, 'name') ?? '(sin nombre)';
-    const line = tag(body, 'coordinates', /<LineString>[\s\S]*?<coordinates>([\s\S]*?)<\/coordinates>/);
-    const point = /<Point>[\s\S]*?<coordinates>([\s\S]*?)<\/coordinates>/.exec(body)?.[1];
-    const raw = point ?? line ?? tag(body, 'coordinates');
+    const line = tag(body, 'coordinates', /<LineString[^>]*>[\s\S]*?<coordinates>([\s\S]*?)<\/coordinates>/);
+    const point = /<Point[^>]*>[\s\S]*?<coordinates>([\s\S]*?)<\/coordinates>/.exec(body)?.[1];
+    // El polígono del área de estudio no es una estación: se lee para poder
+    // mostrarlo, pero no se ofrece como punto de muestreo.
+    const area = tag(body, 'coordinates', /<Polygon[^>]*>[\s\S]*?<coordinates>([\s\S]*?)<\/coordinates>/);
+    const raw = point ?? line ?? area ?? tag(body, 'coordinates');
     if (!raw) continue;
 
     const points = parseCoordinates(raw);
@@ -52,7 +55,7 @@ export function parseKml(xml: string): KmlPlacemark[] {
       name: decode(name),
       description: tag(body, 'description') ? decode(tag(body, 'description')!) : null,
       folder,
-      kind: point ? 'punto' : 'linea',
+      kind: point ? 'punto' : line ? 'linea' : area ? 'area' : 'linea',
       points,
       timestamp: tag(body, 'when') ?? null,
     });
@@ -62,12 +65,14 @@ export function parseKml(xml: string): KmlPlacemark[] {
 
 /** Recorre los Placemark llevando la cuenta de en qué carpeta va cada uno. */
 function* eachPlacemark(xml: string): Generator<{ body: string; folder: string | null }> {
-  const token = /<Folder>|<\/Folder>|<Placemark>[\s\S]*?<\/Placemark>/g;
+  // Google Earth Pro escribe <Placemark id="ID_00000"> y <Folder id="...">:
+  // exigir la etiqueta pelada dejaba el archivo entero en cero placemarks.
+  const token = /<Folder[^>]*>|<\/Folder>|<Placemark[^>]*>[\s\S]*?<\/Placemark>/g;
   const stack: string[] = [];
   let m: RegExpExecArray | null;
   while ((m = token.exec(xml)) !== null) {
     const text = m[0];
-    if (text === '<Folder>') {
+    if (text.startsWith('<Folder')) {
       // El nombre de la carpeta viene justo después de abrirla.
       const after = xml.slice(m.index, m.index + 400);
       stack.push(decode(tag(after, 'name') ?? ''));
@@ -169,10 +174,12 @@ export interface StationCandidate {
  * una línea da además el inicio y el fin del transecto.
  */
 export function toStationCandidates(placemarks: KmlPlacemark[]): StationCandidate[] {
+  // Las áreas de estudio son polígonos de contexto, no estaciones.
+  const puntos = placemarks.filter((p) => p.kind !== 'area');
   const seen = new Map<string, number>();
-  for (const p of placemarks) seen.set(p.name, (seen.get(p.name) ?? 0) + 1);
+  for (const p of puntos) seen.set(p.name, (seen.get(p.name) ?? 0) + 1);
 
-  return placemarks.map((p) => {
+  return puntos.map((p) => {
     const first = p.points[0];
     const last = p.points[p.points.length - 1];
     return {

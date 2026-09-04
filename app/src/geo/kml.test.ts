@@ -3,6 +3,7 @@
  * con los puntos de muestreo y, a veces, los transectos dibujados como línea.
  * No se usa ningún KMZ real: lleva las coordenadas exactas de un proyecto.
  */
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { parseKml, toStationCandidates } from './kml';
 
@@ -95,5 +96,25 @@ describe('candidatos a estación', () => {
     const pm01 = candidates.find((c) => c.name === 'PM01')!;
     expect(pm01.end).toBeNull();
     expect(pm01.lengthMeters).toBeNull();
+  });
+});
+
+describe('KML de Google Earth Pro', () => {
+  const kml = readFileSync(new URL('./__fixtures__/google-earth-pro.kml', import.meta.url), 'utf8');
+
+  it('lee los placemark aunque traigan atributos', () => {
+    // Google Earth Pro escribe <Placemark id="ID_00000"> y <Folder id="...">.
+    // Exigir la etiqueta pelada dejaba el archivo completo en cero puntos.
+    const doc = parseKml(kml);
+    expect(doc.map((p) => p.name)).toEqual(['EMF01', 'TR01', 'Área de estudio']);
+    expect(doc[0].folder).toBe('Puntos');
+    expect(doc.map((p) => p.kind)).toEqual(['punto', 'linea', 'area']);
+  });
+
+  it('no ofrece el polígono del área de estudio como estación', () => {
+    const cands = toStationCandidates(parseKml(kml));
+    expect(cands.map((c) => c.name)).toEqual(['EMF01', 'TR01']);
+    expect(cands[1].end).not.toBeNull();
+    expect(cands[1].lengthMeters).toBeGreaterThan(390);
   });
 });

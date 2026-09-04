@@ -48,6 +48,9 @@ export interface ImportedRecord {
   weather: string | null;
   notes: string | null;
   recordedBy: string | null;
+  team: string | null;
+  /** Con crías, en celo, empollando: no es el estado vivo/muerto. */
+  reproductiveCondition: string | null;
   aerial: { origin?: string; destination?: string; flightHeightCategory?: string; flightHeightMeters?: number } | null;
 }
 
@@ -60,6 +63,7 @@ export interface ImportedStation {
   season: string | null;
   habitat: string | null;
   slopeAspect: string | null;
+  sector: string | null;
   utmEast: number | null;
   utmNorth: number | null;
 }
@@ -211,6 +215,7 @@ export function analyzeWorkbook(data: ArrayBuffer, options: ImportOptions): Impo
           season: clean(row[find('campaign.season')]),
           habitat: clean(row[find('station.habitat')]),
           slopeAspect: clean(row[find('station.slope')]),
+          sector: clean(row[find('station.sector')]),
           utmEast: num(row[find('station.utmEast')]),
           utmNorth: num(row[find('station.utmNorth')]),
         });
@@ -276,6 +281,8 @@ export function analyzeWorkbook(data: ArrayBuffer, options: ImportOptions): Impo
         weather: clean(row[find('event.weather')]),
         notes: clean(row[find('occurrence.notes')]),
         recordedBy: clean(row[find('event.recordedBy')]),
+        team: clean(row[find('event.team')]),
+        reproductiveCondition: clean(row[find('occurrence.reproductiveCondition')]),
         aerial: aerialSheet
           ? {
               origin: clean(row[find('aerial.origin')]) ?? undefined,

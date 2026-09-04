@@ -83,13 +83,14 @@ export const NATIVE_TEMPLATE: ExportTemplate = {
       columns: [
         column('event.date'), column('occurrence.time'),
         column('project.name'), column('campaign.name'), column('campaign.season'),
-        column('station.code'), column('station.region'), column('station.habitat'),
-        column('station.slope'), column('event.weather'),
-        column('event.method'), column('event.recordedBy'),
+        column('station.code'), column('station.sector'), column('station.region'),
+        column('station.habitat'), column('station.slope'), column('event.weather'),
+        column('event.method'), column('event.recordedBy'), column('event.team'),
         column('occurrence.commonName'), column('taxon.scientificName'),
         column('occurrence.recordType'), column('occurrence.evidenceKind'),
         column('occurrence.count'), column('occurrence.sex'), column('occurrence.lifeStage'),
         column('occurrence.condition'), column('occurrence.behaviour'),
+        column('occurrence.reproductiveCondition'),
         column('occurrence.confidence'), column('occurrence.detectionDistance'),
         column('occurrence.organismId'),
         column('occurrence.latitude'), column('occurrence.longitude'),
@@ -211,7 +212,17 @@ const ALIAS_INDEX: Array<{ alias: string; fieldId: string }> = EXPORT_FIELDS.fla
  * dato equivocado.
  */
 export function guessField(header: string): HeaderMatch {
-  const q = fold(header);
+  // Las planillas de terreno meten la instrucción en el propio encabezado
+  // ("UTM -E (no modificar)", "ID. Estación de Muestreo (No modificar)"). Eso
+  // es una nota para quien llena, no parte del nombre de la columna.
+  const sinNota = header.replace(/\([^)]*\)/g, ' ');
+  const directo = matchHeader(fold(header));
+  if (directo.confidence >= 1) return directo;
+  const limpio = matchHeader(fold(sinNota));
+  return limpio.confidence > directo.confidence ? limpio : directo;
+}
+
+function matchHeader(q: string): HeaderMatch {
   if (!q) return { fieldId: null, confidence: 0 };
 
   for (const { alias, fieldId } of ALIAS_INDEX) {
@@ -223,6 +234,9 @@ export function guessField(header: string): HeaderMatch {
     if (alias.length < 4) continue;
     if (q.includes(alias) || alias.includes(q)) {
       const ratio = Math.min(alias.length, q.length) / Math.max(alias.length, q.length);
+      // Un encabezado de cuatro letras dentro de un alias de dieciséis
+      // ("TIPO" en "tipo de registro") no es evidencia: es una coincidencia.
+      if (ratio < 0.34) continue;
       const confidence = 0.6 + 0.25 * ratio;
       if (confidence > best.confidence) best = { fieldId, confidence, matchedAlias: alias };
     }

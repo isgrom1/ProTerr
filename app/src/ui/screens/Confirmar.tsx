@@ -12,7 +12,14 @@ import { preparePhoto, suggestionFrom, type PhotoSuggestion } from '../../media/
 import { attachMedia } from '../../db/repository';
 import type { ObservationDraft } from '../../domain/draft';
 import { useStore } from '../../state/store';
+import { requirementFor } from '../../validation/profiles';
 import { METHOD_LABELS } from './Terreno';
+
+/** Vocabulario por defecto; una plantilla puede traer el suyo. */
+const REPRODUCTIVA = [
+  'No registrada', 'Hembra con crías', 'Macho con crías', 'Hembra en celo',
+  'Hembra preñada', 'Empollando', 'En cortejo', 'Nido activo',
+];
 
 export function Confirmar() {
   const s = useStore();
@@ -65,6 +72,10 @@ function DraftCard({ draft, index }: { draft: ObservationDraft; index: number })
   // trampeo, igual que el origen del vuelo sólo existe en tránsito aéreo.
   const isTrapping = draft.method === 'trampa_sherman' || draft.method === 'camara_trampa';
   const sites = (station?.sites ?? []).filter((site) => site.kind === draft.method);
+  // Con crías, en celo, empollando: sólo tiene sentido si se vio al animal.
+  const pideReproductiva = requirementFor(s.profile, 'reproductiveCondition', {
+    method: draft.method, recordType: draft.recordType ?? undefined,
+  }) !== 'hidden';
 
   return (
     <section className="card">
@@ -194,6 +205,13 @@ function DraftCard({ draft, index }: { draft: ObservationDraft; index: number })
               <input type="number" min={0} value={draft.detectionDistanceMeters ?? ''}
                 onChange={(e) => patch({ detectionDistanceMeters: e.target.value === '' ? null : Number(e.target.value) })} />
             </Field>
+            {pideReproductiva && (
+              <Field label="Condición reproductiva">
+                <Select value={draft.reproductiveCondition ?? ''}
+                  options={vocab.reproductiveCondition ?? REPRODUCTIVA}
+                  onChange={(v) => patch({ reproductiveCondition: v || null })} />
+              </Field>
+            )}
             <Field label="Código del individuo">
               <input type="text" value={draft.organismId ?? ''} placeholder="marca, anillo, chip"
                 onChange={(e) => patch({ organismId: e.target.value || null })} />

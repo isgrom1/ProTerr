@@ -15,7 +15,8 @@ export type RequirableField =
   | 'organismCondition' | 'behaviour' | 'notes' | 'photos'
   | 'occurrenceCoordinates' | 'flightDirection' | 'flightHeight' | 'flightOrigin'
   | 'flightDestination' | 'playbackResponse'
-  | 'effort' | 'conditions' | 'detectionDistance' | 'organismId' | 'trapNumber';
+  | 'effort' | 'conditions' | 'detectionDistance' | 'organismId' | 'trapNumber'
+  | 'reproductiveCondition';
 
 export type Requirement = 'required' | 'recommended' | 'optional' | 'hidden';
 
@@ -73,6 +74,9 @@ export const DEFAULT_PROFILE: RequirementProfile = {
     organismId: 'hidden',
     // Sólo existe en trampeo: en un transecto no hay ninguna trampa que numerar.
     trapNumber: 'hidden',
+    // Varias consultoras la piden en columna propia; ProTerr no la exige, pero
+    // la ofrece cuando el registro es un individuo visto.
+    reproductiveCondition: 'hidden',
     // Campos de tránsito aéreo: ocultos salvo que la metodología los active.
     flightDirection: 'hidden',
     flightHeight: 'hidden',
@@ -137,7 +141,11 @@ export const DEFAULT_PROFILE: RequirementProfile = {
    */
   overridesByRecordType: {
     // --- Visto: se puede describir lo que hacía y qué edad aparentaba ---
-    Individuo: { behaviour: 'recommended', lifeStage: 'recommended', sex: 'optional' },
+    Individuo: {
+      behaviour: 'recommended', lifeStage: 'recommended', sex: 'optional',
+      // Sólo se puede saber si estaba con crías o en celo si se le vio.
+      reproductiveCondition: 'optional',
+    },
 
     // --- Sólo oído: la vocalización ES la conducta; el resto no se ve ---
     Vocalización: { behaviour: 'hidden', lifeStage: 'hidden', sex: 'hidden' },

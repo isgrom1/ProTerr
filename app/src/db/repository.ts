@@ -300,6 +300,7 @@ export async function commitDraft(
     detectionDistanceMeters: draft.detectionDistanceMeters ?? null,
     organismId: draft.organismId ?? null,
     trapNumber: draft.trapNumber ?? null,
+    reproductiveCondition: draft.reproductiveCondition ?? null,
     recapture: draft.recapture ?? null,
     reviewState: 'terreno',
     reviewedBy: null,

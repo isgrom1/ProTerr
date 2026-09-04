@@ -90,3 +90,65 @@ describe('la plantilla resultante reproduce el formato de origen', () => {
     ]);
   });
 });
+
+/**
+ * Formulario con las mañas que traen las planillas reales de terreno: la
+ * instrucción metida en el propio encabezado, un correlativo llamado "Orden"
+ * y columnas con nombres cortos y ambiguos.
+ */
+const consultoraC = workbook({
+  'LDB': [
+    ['Orden (No cambiar numeración)', 'Responsable', 'Equipo', 'Fecha', 'Hora',
+     'ID. Estación de Muestreo (No modificar)', 'ID_TECNICA (no modifcar)',
+     'TIPO (no modificar)', 'Método (no modificar)', 'UTM -E (no modificar)',
+     'UTM-N (no modificar)', 'Sector', 'Clase', 'Abundancia',
+     'Condición reproductiva', 'Etapa de vida', 'Estado del organismo'],
+    [1, 'A. Pérez', 'Equipo 3', '2026-06-02', '10:00', 'EM11', 'CT11C', 'Tipo C',
+     'Camara trampa', 360309, 7441359, 'Norte', 'Mammalia', 2,
+     'Hembra con crías', 'Adulto', 'Vivo'],
+    [2, 'A. Pérez', 'Equipo 3', '2026-06-02', '10:30', 'EM12', 'CT12C', 'Tipo C',
+     'Camara trampa', 360409, 7441459, 'Norte', 'Aves', 1,
+     'No registrada', 'Adulto', 'Vivo'],
+    [3, 'A. Pérez', 'Equipo 3', '2026-06-03', '09:00', 'EM13', 'CT13C', 'Tipo B',
+     'Camara trampa', 360509, 7441559, 'Sur', 'Aves', 4,
+     'No registrada', 'Adulto', 'Vivo'],
+  ],
+});
+
+describe('encabezados con instrucciones adentro', () => {
+  const d = detectTemplate(consultoraC, 'consultora-c.xlsx');
+  const hoja = d.sheets.find((s) => s.name === 'LDB')!;
+  const campo = (header: string) => hoja.columns.find((c) => c.header === header)?.fieldId ?? null;
+
+  it('ignora la instrucción entre paréntesis para reconocer la columna', () => {
+    expect(campo('UTM -E (no modificar)')).toBe('occurrence.utmEast');
+    expect(campo('UTM-N (no modificar)')).toBe('occurrence.utmNorth');
+    expect(campo('Método (no modificar)')).toBe('event.method');
+    expect(campo('ID. Estación de Muestreo (No modificar)')).toBe('station.code');
+  });
+
+  it('no confunde el correlativo de filas con el orden taxonómico', () => {
+    // "Orden" es a la vez el orden de Linneo y el número de fila. Si la
+    // columna trae puros números, no es taxonomía: mejor vacía que errada.
+    expect(campo('Orden (No cambiar numeración)')).toBeNull();
+  });
+
+  it('no empareja un encabezado corto por aparecer dentro de un alias largo', () => {
+    // "TIPO" es tipo de estación aquí, no el filo ni el tipo de registro.
+    expect(campo('TIPO (no modificar)')).toBeNull();
+  });
+
+  it('reconoce las columnas que las planillas de terreno traen aparte', () => {
+    expect(campo('Responsable')).toBe('event.recordedBy');
+    expect(campo('Equipo')).toBe('event.team');
+    expect(campo('Sector')).toBe('station.sector');
+    expect(campo('ID_TECNICA (no modifcar)')).toBe('occurrence.site');
+    expect(campo('Etapa de vida')).toBe('occurrence.lifeStage');
+  });
+
+  it('separa la condición reproductiva del estado del organismo', () => {
+    // Confundirlas convierte "Hembra con crías" en "Vivo" y se pierde el dato.
+    expect(campo('Condición reproductiva')).toBe('occurrence.reproductiveCondition');
+    expect(campo('Estado del organismo')).toBe('occurrence.condition');
+  });
+});

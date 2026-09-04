@@ -50,15 +50,16 @@ function amPm(time: string | null | undefined): string {
 
 export const EXPORT_FIELDS: ExportField[] = [
   // --- Evento ---
-  { id: 'event.date', label: 'Fecha', group: 'Evento', aliases: ['fecha', 'date', 'fecha de registro', 'fecha muestreo'], resolve: (r) => r.event.eventDate },
+  { id: 'event.date', label: 'Fecha', group: 'Evento', aliases: ['fecha', 'date', 'fecha de registro', 'fecha muestreo', 'fecha hora', 'fecha y hora'], resolve: (r) => r.event.eventDate },
   { id: 'event.year', label: 'Año', group: 'Evento', aliases: ['ano', 'year'], resolve: (r) => Number(r.event.eventDate.slice(0, 4)) },
   { id: 'event.month', label: 'Mes', group: 'Evento', aliases: ['mes', 'month'], resolve: (r) => Number(r.event.eventDate.slice(5, 7)) },
   { id: 'event.day', label: 'Día', group: 'Evento', aliases: ['dia', 'day'], resolve: (r) => Number(r.event.eventDate.slice(8, 10)) },
   { id: 'occurrence.time', label: 'Hora', group: 'Evento', aliases: ['hora', 'time', 'hora de registro', 'hora observacion'], resolve: (r) => r.occurrence.occurrenceTime },
   { id: 'occurrence.amPm', label: 'AM/PM', group: 'Evento', aliases: ['am pm', 'am/pm', 'periodo'], resolve: (r) => amPm(r.occurrence.occurrenceTime) },
   { id: 'event.method', label: 'Metodología', group: 'Evento', aliases: ['metodologia', 'metodologia usada para registro', 'metodo', 'protocolo', 'tipo de muestreo'], resolve: (r) => METHOD_LABEL[r.event.method] },
-  { id: 'event.recordedBy', label: 'Observador', group: 'Evento', aliases: ['observador', 'muestreado por', 'registrado por', 'evaluador', 'recorded by', 'colector'], resolve: (r) => blank(r.event.recordedBy ?? r.station?.recordedBy) },
+  { id: 'event.recordedBy', label: 'Observador', group: 'Evento', aliases: ['observador', 'muestreado por', 'registrado por', 'evaluador', 'recorded by', 'colector', 'responsable', 'responsables'], resolve: (r) => blank(r.event.recordedBy ?? r.station?.recordedBy) },
   { id: 'event.identifiedBy', label: 'Identificado por', group: 'Evento', aliases: ['identificado por', 'determinado por', 'identified by'], resolve: (r) => blank(r.station?.identifiedBy) },
+  { id: 'event.team', label: 'Equipo', group: 'Evento', aliases: ['equipo', 'brigada', 'cuadrilla', 'team', 'equipo de terreno'], resolve: (r) => blank(r.event.team) },
   { id: 'event.weather', label: 'Clima', group: 'Evento', aliases: ['clima', 'condiciones', 'tiempo', 'weather'], resolve: (r) => blank(r.event.weather) },
   { id: 'event.period', label: 'Periodo del día', group: 'Evento', aliases: ['periodo del dia', 'momento del dia', 'jornada'], resolve: (r) => blank(r.event.conditions?.period) },
   { id: 'event.temperature', label: 'Temperatura (°C)', group: 'Evento', aliases: ['temperatura', 'temp'], resolve: (r) => blank(r.event.conditions?.temperatureC) },
@@ -75,6 +76,7 @@ export const EXPORT_FIELDS: ExportField[] = [
   { id: 'campaign.season', label: 'Temporada', group: 'Estación', aliases: ['temporada', 'estacion del ano', 'season'], resolve: (r) => blank(r.campaign?.season ?? r.station?.season) },
   { id: 'station.code', label: 'ID Estación', group: 'Estación', aliases: ['id estacion', 'estacion', 'codigo estacion', 'punto', 'sitio', 'transecto', 'station'], resolve: (r) => blank(r.station?.stationCode) },
   { id: 'station.finalCode', label: 'ID Final Estación', group: 'Estación', aliases: ['id final estacion', 'id estacion final', 'codigo final'], resolve: (r) => blank(r.station?.finalStationCode) },
+  { id: 'station.sector', label: 'Sector', group: 'Estación', aliases: ['sector', 'localidad', 'zona', 'area de estudio', 'unidad territorial'], resolve: (r) => blank(r.station?.sector) },
   { id: 'station.region', label: 'Región', group: 'Estación', aliases: ['region', 'provincia', 'state province'], resolve: (r) => blank(r.station?.region ?? r.project?.region) },
   { id: 'station.habitat', label: 'Ambiente', group: 'Estación', aliases: ['ambiente', 'habitat', 'formacion vegetal', 'unidad ambiental'], resolve: (r) => blank(r.station?.habitat) },
   { id: 'station.slope', label: 'Ladera de exposición', group: 'Estación', aliases: ['ladera', 'ladera de exposicion', 'exposicion'], resolve: (r) => blank(r.station?.slopeAspect) },
@@ -94,30 +96,34 @@ export const EXPORT_FIELDS: ExportField[] = [
 
   // --- Registro ---
   { id: 'occurrence.commonName', label: 'Nombre común', group: 'Registro', aliases: ['nombre comun', 'especie', 'nombre vulgar', 'vernacular', 'common name'], resolve: (r) => blank(r.taxon?.commonName ?? r.occurrence.verbatimTaxonText) },
-  { id: 'occurrence.recordType', label: 'Tipo de registro', group: 'Registro', aliases: ['tipo de registro', 'registro', 'evidencia', 'tipo registro'], resolve: (r) => r.occurrence.recordType },
+  { id: 'occurrence.recordType', label: 'Tipo de registro', group: 'Registro', aliases: ['tipo de registro', 'registro', 'evidencia', 'tipo registro', 'tipo de actividad', 'tipo actividad'], resolve: (r) => r.occurrence.recordType },
   { id: 'occurrence.evidenceKind', label: 'Directo/Indirecto', group: 'Registro', aliases: ['directo indirecto', 'tipo registro directo indirecto', 'tipo de evidencia'], resolve: (r) => r.occurrence.evidenceKind },
   { id: 'occurrence.count', label: 'Abundancia', group: 'Registro', aliases: ['abundancia', 'n individuos', 'numero de individuos', 'cantidad', 'individuos', 'individual count'], resolve: (r) => r.occurrence.individualCount ?? '' },
   { id: 'occurrence.sex', label: 'Sexo', group: 'Registro', aliases: ['sexo', 'sex'], resolve: (r) => blank(r.occurrence.sex) },
-  { id: 'occurrence.lifeStage', label: 'Estado de desarrollo', group: 'Registro', aliases: ['estado desarrollo', 'estado de desarrollo', 'edad', 'life stage', 'clase etaria'], resolve: (r) => blank(r.occurrence.lifeStage) },
+  { id: 'occurrence.lifeStage', label: 'Estado de desarrollo', group: 'Registro', aliases: ['estado desarrollo', 'estado de desarrollo', 'edad', 'life stage', 'clase etaria', 'etapa de vida', 'estadio'], resolve: (r) => blank(r.occurrence.lifeStage) },
   { id: 'occurrence.condition', label: 'Estado del organismo', group: 'Registro', aliases: ['estado del organismo', 'condicion', 'vivo muerto'], resolve: (r) => blank(r.occurrence.organismCondition) },
   { id: 'occurrence.behaviour', label: 'Comportamiento', group: 'Registro', aliases: ['comportamiento', 'conducta', 'actividad', 'behavior'], resolve: (r) => blank(r.occurrence.behaviour) },
-  { id: 'occurrence.notes', label: 'Observaciones', group: 'Registro', aliases: ['observaciones', 'comentarios', 'notas', 'remarks'], resolve: (r) => blank(r.occurrence.notes) },
+  { id: 'occurrence.notes', label: 'Observaciones', group: 'Registro', aliases: ['observaciones', 'comentarios', 'notas', 'remarks', 'obs general', 'observaciones generales', 'observacion general'], resolve: (r) => blank(r.occurrence.notes) },
   { id: 'occurrence.photos', label: 'Fotos', group: 'Registro', aliases: ['fotos', 'fotografias', 'imagenes', 'media'], resolve: (r) => (r.occurrence.mediaIds.length ? `${r.occurrence.mediaIds.length} foto(s)` : '') },
   { id: 'occurrence.confidence', label: 'Confianza de identificación', group: 'Registro', aliases: ['confianza', 'certeza', 'nivel de identificacion'], resolve: (r) => blank(r.occurrence.identificationConfidence) },
   { id: 'occurrence.detectionDistance', label: 'Distancia de detección (m)', group: 'Registro', aliases: ['distancia de deteccion', 'distancia'], resolve: (r) => blank(r.occurrence.detectionDistanceMeters) },
   { id: 'occurrence.organismId', label: 'Código del individuo', group: 'Registro', aliases: ['codigo individuo', 'marca', 'anillo', 'chip', 'organism id'], resolve: (r) => blank(r.occurrence.organismId) },
+  { id: 'occurrence.reproductiveCondition', label: 'Condición reproductiva', group: 'Registro', aliases: ['condicion reproductiva', 'conducta reprod', 'condicion reprod', 'estado reproductivo', 'reproductive condition'], resolve: (r) => blank(r.occurrence.reproductiveCondition) },
   { id: 'occurrence.trapNumber', label: 'N° de trampa', group: 'Registro', aliases: ['n de trampa', 'numero de trampa', 'trampa', 'trap number'], resolve: (r) => blank(r.occurrence.trapNumber) },
-  { id: 'occurrence.site', label: 'Punto o línea', group: 'Registro', aliases: ['punto de playback', 'linea', 'nombre pb', 'nombre linea', 'sitio'], resolve: (r) => blank(r.site?.name) },
+  { id: 'occurrence.site', label: 'Punto o línea', group: 'Registro', aliases: ['punto de playback', 'linea', 'nombre pb', 'nombre linea', 'sitio', 'id tecnica', 'id de tecnica', 'codigo tecnica'], resolve: (r) => blank(r.site?.name) },
   { id: 'occurrence.recapture', label: 'Recaptura', group: 'Registro', aliases: ['recaptura'], resolve: (r) => yesNo(r.occurrence.recapture) },
-  { id: 'occurrence.utmEast', label: 'UTM E del avistamiento', group: 'Registro', aliases: ['utm e captura', 'utm e captura x', 'este captura', 'utm e avistamiento'], resolve: (r) => (r.occurrence.occurrenceFix ? blank(coordinatesOf(r).utmEast) : '') },
-  { id: 'occurrence.utmNorth', label: 'UTM N del avistamiento', group: 'Registro', aliases: ['utm s captura', 'utm n captura', 'utm s captura y', 'norte captura', 'utm n avistamiento'], resolve: (r) => (r.occurrence.occurrenceFix ? blank(coordinatesOf(r).utmNorth) : '') },
+  { id: 'occurrence.utmEast', label: 'UTM E del avistamiento', group: 'Registro', aliases: ['utm e captura', 'utm e captura x', 'este captura', 'utm e avistamiento', 'utm e', 'e utm', 'utm este'], resolve: (r) => (r.occurrence.occurrenceFix ? blank(coordinatesOf(r).utmEast) : '') },
+  { id: 'occurrence.utmNorth', label: 'UTM N del avistamiento', group: 'Registro', aliases: ['utm s captura', 'utm n captura', 'utm s captura y', 'norte captura', 'utm n avistamiento', 'utm n', 'n utm', 'utm norte'], resolve: (r) => (r.occurrence.occurrenceFix ? blank(coordinatesOf(r).utmNorth) : '') },
   { id: 'occurrence.latitude', label: 'Latitud del avistamiento', group: 'Registro', aliases: ['latitud', 'lat', 'decimal latitude'], resolve: (r) => blank(r.occurrence.occurrenceFix?.latitude) },
   { id: 'occurrence.longitude', label: 'Longitud del avistamiento', group: 'Registro', aliases: ['longitud', 'lon', 'decimal longitude'], resolve: (r) => blank(r.occurrence.occurrenceFix?.longitude) },
 
   // --- Taxonomía ---
   { id: 'taxon.scientificName', label: 'Nombre científico', group: 'Taxonomía', aliases: ['nombre cientifico', 'scientific name', 'binomio', 'taxon'], resolve: (r) => blank(r.taxon?.scientificName) },
   { id: 'taxon.kingdom', label: 'Reino', group: 'Taxonomía', aliases: ['reino', 'kingdom'], resolve: (r) => blank(r.taxon?.kingdom) },
-  { id: 'taxon.phylum', label: 'Filo', group: 'Taxonomía', aliases: ['filo', 'phylum', 'tipo'], resolve: (r) => blank(r.taxon?.phylum) },
+  { id: 'taxon.phylum', label: 'Filo', group: 'Taxonomía', // "tipo" NO es alias: en las planillas de terreno casi siempre significa
+  // tipo de estación o de vuelo, y emparejarlo con el filo llena la columna
+  // taxonómica con "Tipo C".
+  aliases: ['filo', 'phylum'], resolve: (r) => blank(r.taxon?.phylum) },
   { id: 'taxon.class', label: 'Clase', group: 'Taxonomía', aliases: ['clase', 'class'], resolve: (r) => blank(r.taxon?.classEs ?? r.taxon?.class) },
   { id: 'taxon.classLatin', label: 'Clase (latín)', group: 'Taxonomía', aliases: ['clase latin', 'class latin'], resolve: (r) => blank(r.taxon?.class) },
   { id: 'taxon.order', label: 'Orden', group: 'Taxonomía', aliases: ['orden', 'order'], resolve: (r) => blank(r.taxon?.order) },
@@ -131,7 +137,7 @@ export const EXPORT_FIELDS: ExportField[] = [
   { id: 'aerial.origin', label: 'Origen del vuelo', group: 'Vuelo', aliases: ['origen', 'origin'], resolve: (r) => blank(r.occurrence.aerial?.origin) },
   { id: 'aerial.destination', label: 'Destino del vuelo', group: 'Vuelo', aliases: ['destino', 'destination'], resolve: (r) => blank(r.occurrence.aerial?.destination) },
   { id: 'aerial.direction', label: 'Dirección de vuelo', group: 'Vuelo', aliases: ['direccion de vuelo', 'direccion vuelo', 'rumbo'], resolve: (r) => blank(r.occurrence.aerial?.flightDirection) },
-  { id: 'aerial.heightCategory', label: 'Categoría de altura', group: 'Vuelo', aliases: ['altura vuelo', 'categoria de altura', 'categoria altura'], resolve: (r) => blank(r.occurrence.aerial?.flightHeightCategory) },
+  { id: 'aerial.heightCategory', label: 'Categoría de altura', group: 'Vuelo', aliases: ['altura vuelo', 'categoria de altura', 'categoria altura', 'referencia de altura', 'referencia altura'], resolve: (r) => blank(r.occurrence.aerial?.flightHeightCategory) },
   { id: 'aerial.heightMeters', label: 'Altura de vuelo (m)', group: 'Vuelo', aliases: ['altura vuelo lat o metros', 'altura en metros', 'altura m'], resolve: (r) => blank(r.occurrence.aerial?.flightHeightMeters) },
 
   // --- Esfuerzo ---

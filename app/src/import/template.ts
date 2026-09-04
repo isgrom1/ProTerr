@@ -75,6 +75,33 @@ function trimEnd(cells: string[]): string[] {
   return cells.slice(0, end);
 }
 
+/** Campos donde un número es lo esperado y no delata un error de emparejamiento. */
+const NUMERIC_FIELDS = new Set([
+  'event.year', 'event.month', 'event.day', 'occurrence.count',
+  'occurrence.latitude', 'occurrence.longitude', 'occurrence.utmEast', 'occurrence.utmNorth',
+  'occurrence.detectionDistance', 'occurrence.trapNumber',
+  'station.latitude', 'station.longitude', 'station.utmEast', 'station.utmNorth',
+  'station.utmStartEast', 'station.utmStartNorth', 'station.utmEndEast', 'station.utmEndNorth',
+  'aerial.heightMeters', 'aerial.heightCategory',
+  'event.temperature', 'event.wind', 'event.cloud',
+  'effort.durationMinutes', 'effort.distanceMeters', 'effort.trapNights', 'effort.trapCount',
+]);
+
+/** ¿La columna trae números y nada más? Se miran hasta 30 filas con dato. */
+function looksNumeric(body: unknown[][], index: number): boolean {
+  let numeros = 0;
+  let total = 0;
+  for (const row of body) {
+    const cell = clean((row ?? [])[index]);
+    if (!cell) continue;
+    total++;
+    if (/^-?\d+([.,]\d+)?$/.test(cell)) numeros++;
+    if (total >= 30) break;
+  }
+  // Con menos de tres datos no hay evidencia suficiente para descartar nada.
+  return total >= 3 && numeros / total >= 0.8;
+}
+
 /** Hojas que claramente no son formularios de registro. */
 function looksIgnorable(name: string, columns: DetectedColumn[]): boolean {
   const n = fold(name);
@@ -97,16 +124,24 @@ export function detectTemplate(data: ArrayBuffer, fileName: string): TemplateDet
     }
 
     const headerCells = (rows[headerRow - 1] ?? []).map(clean);
+    const body = rows.slice(headerRow);
     const columns: DetectedColumn[] = [];
     headerCells.forEach((header, index) => {
       if (!header) return;
       const guess = guessField(header);
+      // "Orden" es el orden taxonómico y también el número de fila. Si la
+      // columna trae puros números, no es taxonomía: se deja sin emparejar
+      // antes que exportar el correlativo como si fuera un orden.
+      const descartado = guess.fieldId !== null
+        && !NUMERIC_FIELDS.has(guess.fieldId)
+        && looksNumeric(body, index);
+      const fieldId = descartado ? null : guess.fieldId;
       columns.push({
         index, header,
-        fieldId: guess.fieldId,
-        fieldLabel: guess.fieldId ? FIELDS_BY_ID.get(guess.fieldId)?.label ?? null : null,
-        confidence: guess.confidence,
-        matchedAlias: guess.matchedAlias,
+        fieldId,
+        fieldLabel: fieldId ? FIELDS_BY_ID.get(fieldId)?.label ?? null : null,
+        confidence: fieldId ? guess.confidence : 0,
+        matchedAlias: fieldId ? guess.matchedAlias : undefined,
       });
     });
 

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+<Document id="Demo_Estaciones">
+	<name>Estaciones de demostración</name>
+	<Folder id="FLD_0">
+		<name>Puntos</name>
+		<Placemark id="ID_00000">
+			<name>EMF01</name>
+			<Point><coordinates>-71.350000,-32.960000,0</coordinates></Point>
+		</Placemark>
+		<Placemark id="ID_00001">
+			<name>TR01</name>
+			<LineString><coordinates>-71.350000,-32.960000,0 -71.350000,-32.963627,0</coordinates></LineString>
+		</Placemark>
+	</Folder>
+	<Placemark id="ID_00002">
+		<name>Área de estudio</name>
+		<Polygon><outerBoundaryIs><LinearRing><coordinates>
+			-71.36,-32.95,0 -71.34,-32.95,0 -71.34,-32.97,0 -71.36,-32.97,0 -71.36,-32.95,0
+		</coordinates></LinearRing></outerBoundaryIs></Polygon>
+	</Placemark>
+</Document>
+</kml>
