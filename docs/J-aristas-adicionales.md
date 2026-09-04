@@ -398,30 +398,60 @@ las cuatro quedan identificadas N/E/S/O sin escribir nada.
 
 ## J.18 Modelo de licencia (decidido, sin implementar)
 
-**Ciclo fijo de 7 días que se repite: 2 días gratis, 5 días de pago.** Terminados
-los 5, se abren otros 2 gratis, y así indefinidamente. No se acumulan: los 2 días
-que no se usan se pierden al cerrarse la ventana.
+**Dos días de USO por cada siete corridos, los que el usuario elija. No se
+acumulan**: los que no se usan se pierden al cerrarse la ventana. Gastados los
+dos, los cinco días restantes de esa ventana son de pago; después se abren otros
+dos gratis, y así indefinidamente.
+
+Es la misma economía que un ciclo de calendario —2 gratis y 5 de pago por
+semana— pero el usuario decide cuáles son los dos, en vez de que se lo asigne el
+almanaque. Quien sale poco a terreno no paga nunca; quien hace campaña seguida se
+queda sin crédito al tercer día.
 
 La app **nunca deja de funcionar ni retiene los datos**. Lo que se bloquea en los
 días de pago es registrar nuevo; leer, exportar y respaldar lo ya guardado sigue
 disponible siempre. Un dato de terreno que no se puede sacar es un dato secuestrado,
 y eso no se hace.
 
-**Sin publicidad.** Un consultor abre esta app frente al mandante; un aviso ahí le
-quita seriedad al informe que la app produce.
+**Publicidad: una sola, al abrir la app.** Nada durante el trabajo. La condición
+es que sea de marcas del rubro —equipamiento de terreno, óptica, outdoor— y no
+inventario de red genérico. Eso obliga a venderla directo, porque una red de
+publicidad entrega lo que tenga y además rastrea al dispositivo, lo que choca con
+el compromiso de que por esta app no pasan datos de proyectos de terceros.
+
+Mientras no haya acuerdos directos, no hay aviso: es preferible ninguna
+publicidad a una cualquiera.
 
 ### Lo que hay que resolver antes de construirlo
 
-- **A qué se ancla el ciclo.** Si corre por calendario, dos días de campaña que
-  caigan en la ventana equivocada se pagan y los mismos dos días una semana después
-  no. El usuario no controla en qué parte del ciclo está, y eso se siente arbitrario.
-  La alternativa que conserva la misma economía es contar **días de uso**, no de
-  calendario: dos días de registro por cada siete corridos, los que el usuario elija.
+- **Qué cuenta como día de uso.** Guardar un registro, se entiende. ¿Abrir la app
+  para mirar lo de ayer, también? Debería no contar: penalizaría revisar el trabajo.
 - **Dónde vive.** Exige un servidor que sepa quién eres y cuántos días llevas. Hoy
   no existe: la app no tiene cuenta, ni servidor, ni analítica.
 - **Separación estricta.** La licencia por un lado y los registros de fauna por otro.
   El servidor de licencias no puede ver ni un dato de terreno: son datos de proyectos
   de terceros y ése es el compromiso que la app tiene hoy por no tener servidor.
+
+## J.19 La categoría de conservación se consulta, no se guarda
+
+La nómina del MMA **no viaja dentro de la app**. La razón es la fecha: a junio de
+2026 van veinte procesos de clasificación, y una copia vieja dentro de la app se
+convierte en una categoría equivocada dentro de un informe que va a la autoridad.
+El catálogo de especies que trae ProTerr sale ahora sin ninguna categoría puesta.
+
+Se consulta a un servicio configurable (Ajustes → Categoría de conservación), que
+recibe `?nombre=<binomio>` y responde JSON con `categoria` y, si los tiene,
+`origen`, `endemica`, `fuente` y `fechaFuente`.
+
+**Todo lo consultado se guarda.** Una especie ya preguntada responde después sin
+señal, con la fecha de consulta a la vista, para que quien lea el informe sepa de
+cuándo es el dato. Lo que nunca se consultó queda como **«sin consultar»**, que la
+app distingue de **«sin categoría»**: la primera es ignorancia, la segunda es un
+dato. Nunca se inventa una categoría.
+
+El precio de esto es que la primera vez que se registra una especie hace falta
+señal para ver su categoría en el punto. Es un precio aceptable porque el dato se
+necesita sobre todo al entregar, no al observar.
 
 ## Lo que sigue faltando, y por qué
 

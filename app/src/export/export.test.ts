@@ -10,6 +10,14 @@ import { flatten, type Catalogs } from './shape';
 
 const taxa = taxaSeed as unknown as Taxon[];
 const byName = (n: string) => taxa.find((t) => t.commonName === n)!;
+/**
+ * El catálogo ya no trae categorías de conservación: se consultan en línea
+ * (ver src/conservation/lookup.ts). Las pruebas las ponen a mano, que además
+ * deja explícito qué categoría se está probando.
+ */
+const CONSERVACION = { rce: 'VU', rceDecree: null, iucn: null, origin: 'Nativa', endemic: false, migratory: false, source: 'prueba' };
+const conCategoria = (t: Taxon): Taxon => ({ ...t, conservation: CONSERVACION as never });
+
 
 const project: Project = {
   id: 'p1', code: 'DEMO-01', name: 'Proyecto de demostración', client: 'Cliente demo', region: 'Valparaíso',
@@ -60,7 +68,8 @@ const catalogs: Catalogs = {
   projects: new Map([[project.id, project]]),
   campaigns: new Map([[campaign.id, campaign]]),
   stations: new Map([[station.id, station]]),
-  taxa: new Map(taxa.map((t) => [t.id, t])),
+  // El cóndor lleva categoría puesta aquí, no heredada del catálogo.
+  taxa: new Map(taxa.map((t) => [t.id, t.commonName === 'Cóndor' ? conCategoria(t) : t])),
 };
 
 const e1 = event('e1', 'transecto');
@@ -322,7 +331,8 @@ describe('esfuerzo, conservación y datos sensibles', () => {
     const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(wb.Sheets.Registros, { defval: '' });
     const condor = rows.find((r) => String(r['ID del registro']).endsWith(':occ:o5'))!;
     expect(String(condor['Categoría de conservación'])).toContain('VU');
-    expect(String(condor['Fuente de conservación'])).toContain('EJEMPLO');
+    // La fuente siempre acompaña a la categoría: nunca sale una sin la otra.
+    expect(String(condor['Fuente de conservación'])).toContain('prueba');
     expect(condor['Confianza de identificación']).toBe('probable');
   });
 

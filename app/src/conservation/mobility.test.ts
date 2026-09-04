@@ -5,6 +5,14 @@ import { locationFixNeed, mobilityOf, suggestsPhoto } from './mobility';
 
 const taxa = taxaSeed as unknown as Taxon[];
 const byName = (n: string) => taxa.find((t) => t.commonName === n)!;
+/**
+ * El catálogo ya no trae categorías de conservación: se consultan en línea
+ * (ver src/conservation/lookup.ts). Las pruebas las ponen a mano, que además
+ * deja explícito qué categoría se está probando.
+ */
+const CONSERVACION = { rce: 'VU', rceDecree: null, iucn: null, origin: 'Nativa', endemic: false, migratory: false, source: 'prueba' };
+const conCategoria = (t: Taxon): Taxon => ({ ...t, conservation: CONSERVACION as never });
+
 
 describe('movilidad de la especie', () => {
   it('las aves son de alta movilidad: no necesitan punto propio', () => {
@@ -32,7 +40,7 @@ describe('movilidad de la especie', () => {
   });
 
   it('una especie amenazada siempre lleva punto, aunque vuele', () => {
-    const need = locationFixNeed(byName('Cóndor'), 'Individuo');
+    const need = locationFixNeed(conCategoria(byName('Cóndor')), 'Individuo');
     expect(need.required).toBe(true);
     expect(need.reason).toBe('especie en categoría de conservación');
   });
@@ -40,7 +48,7 @@ describe('movilidad de la especie', () => {
 
 describe('sugerencia de fotografía', () => {
   it('se sugiere en amenazadas, evidencia y dudas de identificación', () => {
-    expect(suggestsPhoto(byName('Cóndor'), 'Individuo')).toBe(true);
+    expect(suggestsPhoto(conCategoria(byName('Cóndor')), 'Individuo')).toBe(true);
     expect(suggestsPhoto(byName('Puma'), 'Fecas')).toBe(true);
     expect(suggestsPhoto(byName('Chucao'), 'Individuo', 'probable')).toBe(true);
   });

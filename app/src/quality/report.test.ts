@@ -7,6 +7,22 @@ const taxaList = taxaSeed as unknown as Taxon[];
 const taxa = new Map(taxaList.map((t) => [t.id, t]));
 const byName = (n: string) => taxaList.find((t) => t.commonName === n)!;
 
+/**
+ * El catálogo ya no trae categorías de conservación: se consultan en línea
+ * (ver src/conservation/lookup.ts). Las pruebas las ponen a mano, lo que
+ * además deja explícito qué categoría se está probando.
+ */
+const CONSERVACION = { rce: 'VU', rceDecree: null, iucn: null, origin: 'Nativa', endemic: false, migratory: false, source: 'prueba' };
+const conCategoria = (t: Taxon): Taxon => ({ ...t, conservation: CONSERVACION as never });
+const conOrigen = (t: Taxon, origin: string): Taxon =>
+  ({ ...t, conservation: { ...CONSERVACION, rce: null, origin } as never });
+/** Catálogo de prueba: el cóndor amenazado y el conejo exótico. */
+const taxaPrueba = new Map(taxaList.map((t) => [
+  t.id,
+  t.commonName === 'Cóndor' ? conCategoria(t)
+    : t.commonName === 'Conejo' ? conOrigen(t, 'Exótica') : t,
+]));
+
 const audit = {
   createdAt: '2026-09-04T10:00:00-04:00', createdBy: 'u1', updatedAt: '2026-09-04T10:00:00-04:00',
   updatedBy: 'u1', deletedAt: null, deviceId: 'd1', syncState: 'pending' as const,
@@ -39,7 +55,7 @@ function occ(id: string, patch: Partial<Occurrence> = {}): Occurrence {
 describe('detección de duplicados', () => {
   it('agrupa registros idénticos guardados con segundos de diferencia', () => {
     const r = analyzeQuality({
-      events: [event()], taxa,
+      events: [event()], taxa: taxaPrueba,
       occurrences: [
         occ('a', { createdAt: '2026-09-04T14:00:00Z' }),
         occ('b', { createdAt: '2026-09-04T14:00:20Z' }),
@@ -52,7 +68,7 @@ describe('detección de duplicados', () => {
 
   it('no marca como duplicado lo que está separado en el tiempo', () => {
     const r = analyzeQuality({
-      events: [event()], taxa,
+      events: [event()], taxa: taxaPrueba,
       occurrences: [
         occ('a', { createdAt: '2026-09-04T14:00:00Z' }),
         occ('b', { createdAt: '2026-09-04T14:20:00Z' }),
@@ -63,7 +79,7 @@ describe('detección de duplicados', () => {
 
   it('no confunde especies distintas en la misma hora', () => {
     const r = analyzeQuality({
-      events: [event()], taxa,
+      events: [event()], taxa: taxaPrueba,
       occurrences: [
         occ('a', { createdAt: '2026-09-04T14:00:00Z' }),
         occ('b', { taxonId: byName('Rayadito').id, createdAt: '2026-09-04T14:00:10Z' }),
@@ -94,14 +110,14 @@ describe('esfuerzo y evidencia', () => {
   });
 
   it('un muestreo con esfuerzo completo no genera avisos de esfuerzo', () => {
-    const r = analyzeQuality({ events: [event()], taxa, occurrences: [occ('a')] });
+    const r = analyzeQuality({ events: [event()], taxa: taxaPrueba, occurrences: [occ('a')] });
     expect(r.issues.some((i) => i.kind === 'sin-esfuerzo')).toBe(false);
   });
 
   it('echa de menos la coordenada sólo donde la ubicación significa algo', () => {
     const lagarto = taxaList.find((t) => t.commonName === 'Lagarto de Zapallar')!;
     const r = analyzeQuality({
-      events: [event()], taxa,
+      events: [event()], taxa: taxaPrueba,
       occurrences: [
         occ('ave'),                                    // chucao: no necesita punto
         occ('rep', { taxonId: lagarto.id, recordType: 'Individuo' }),
@@ -114,10 +130,10 @@ describe('esfuerzo y evidencia', () => {
   });
 
   it('exige fotografía a las especies amenazadas', () => {
-    const condor = byName('Cóndor');
-    expect(condor.conservation?.rce).toBe('VU'); // viene de la capa de conservación
+    const condor = conCategoria(byName('Cóndor'));
+    expect(condor.conservation?.rce).toBe('VU'); // la pone la prueba, no el catálogo
     const r = analyzeQuality({
-      events: [event()], taxa,
+      events: [event()], taxa: taxaPrueba,
       occurrences: [occ('a', { taxonId: condor.id, recordType: 'Individuo' })],
     });
     const issue = r.issues.find((i) => i.kind === 'sin-evidencia')!;
@@ -127,7 +143,7 @@ describe('esfuerzo y evidencia', () => {
 
   it('marca una identificación dudosa sin evidencia', () => {
     const r = analyzeQuality({
-      events: [event()], taxa,
+      events: [event()], taxa: taxaPrueba,
       occurrences: [occ('a', { identificationConfidence: 'probable' })],
     });
     expect(r.issues.some((i) => i.kind === 'identificacion-dudosa')).toBe(true);
@@ -135,7 +151,7 @@ describe('esfuerzo y evidencia', () => {
 
   it('detecta un registro validado con campos aún pendientes', () => {
     const r = analyzeQuality({
-      events: [event()], taxa,
+      events: [event()], taxa: taxaPrueba,
       occurrences: [occ('a', { reviewState: 'validado', pendingFields: ['individualCount'] })],
     });
     expect(r.issues.some((i) => i.kind === 'sin-revisar' && i.severity === 'alta')).toBe(true);
@@ -166,10 +182,10 @@ describe('tabla de especies', () => {
   it('marca amenazadas y exóticas', () => {
     const rows = tallyBySpecies([
       occ('a', { taxonId: byName('Cóndor').id }),
-      occ('b', { taxonId: byName('Paloma').id }),
-    ], taxa);
+      occ('b', { taxonId: byName('Conejo').id }),
+    ], taxaPrueba);
     expect(rows.find((r) => r.name === 'Cóndor')?.threatened).toBe(true);
-    expect(rows.find((r) => r.name === 'Paloma')?.exotic).toBe(true);
+    expect(rows.find((r) => r.name === 'Conejo')?.exotic).toBe(true);
   });
 });
 
@@ -177,7 +193,7 @@ describe('lo dictado junto no es un duplicado', () => {
   it('varios grupos de la misma especie en una frase no se marcan', () => {
     // "Tres loicas vocalizando... dos loicas vocalizando" son grupos distintos.
     const r = analyzeQuality({
-      events: [event()], taxa,
+      events: [event()], taxa: taxaPrueba,
       occurrences: [
         occ('a', { individualCount: 3, batchId: 'lote-1', createdAt: '2026-09-04T14:00:00Z' }),
         occ('b', { individualCount: 2, batchId: 'lote-1', createdAt: '2026-09-04T14:00:01Z' }),
@@ -188,7 +204,7 @@ describe('lo dictado junto no es un duplicado', () => {
 
   it('pero un re-dictado en otro lote sí se marca', () => {
     const r = analyzeQuality({
-      events: [event()], taxa,
+      events: [event()], taxa: taxaPrueba,
       occurrences: [
         occ('a', { batchId: 'lote-1', createdAt: '2026-09-04T14:00:00Z' }),
         occ('b', { batchId: 'lote-2', createdAt: '2026-09-04T14:00:20Z' }),

@@ -3,10 +3,11 @@
  * más la descarga de catálogos y la importación de planillas históricas.
  * Todo se edita como datos; no hay que tocar el código.
  */
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { db } from '../../db/db';
 import { seedCatalogs } from '../../db/seed';
 import { EXPORT_FIELDS } from '../../export/fields';
+import { estadoCache, getEndpoint, limpiarCache, setEndpoint } from '../../conservation/lookup';
 import { Icono } from '../Icono';
 import { MODOS, readModo, setModo, type Modo } from '../modo';
 import {
@@ -47,6 +48,12 @@ export function Ajustes() {
   const [templateFile, setTemplateFile] = useState<ArrayBuffer | null>(null);
   const [overrides, setOverrides] = useState<Record<string, SheetOverride>>({});
   const [modo, setModoLocal] = useState<Modo | null>(() => readModo());
+  const [rceUrl, setRceUrl] = useState('');
+  const [cache, setCache] = useState<{ especies: number; masAntigua: string | null }>({ especies: 0, masAntigua: null });
+  useEffect(() => {
+    void getEndpoint().then((v) => setRceUrl(v ?? ''));
+    void estadoCache().then(setCache);
+  }, []);
   const [kml, setKml] = useState<StationCandidate[] | null>(null);
   const [chosen, setChosen] = useState<Set<string>>(new Set());
   const [prefix, setPrefix] = useState('');
@@ -185,6 +192,44 @@ export function Ajustes() {
           await s.init();
           s.notify(`Catálogos actualizados: ${summary.taxa} especies, ${summary.stations} estaciones.`);
         }}>Actualizar catálogos</button>
+      </section>
+
+      {/* La nómina del MMA NO viaja dentro de la app: cambia con cada proceso
+          de clasificación y una copia vieja es una categoría equivocada en un
+          informe. Se consulta a un servicio y se guarda lo consultado. */}
+      <section className="card">
+        <h2>Categoría de conservación</h2>
+        <p className="muted" style={{ fontSize: 13, marginTop: 0 }}>
+          La nómina del Ministerio del Medio Ambiente no viene dentro de la app, a propósito:
+          cambia con cada proceso de clasificación y una copia vieja se convierte en una
+          categoría equivocada dentro de un informe. Se consulta en línea.
+        </p>
+        <div className="field">
+          <label htmlFor="rce">Servicio de consulta</label>
+          <input id="rce" type="text" value={rceUrl} placeholder="https://…/rce"
+            onChange={(e) => setRceUrl(e.target.value)}
+            onBlur={() => void setEndpoint(rceUrl || null)} />
+        </div>
+        <p className="muted" style={{ fontSize: 12 }}>
+          Se le pide <code>?nombre=Lycalopex+fulvipes</code> y debe responder JSON con
+          <code> categoria</code>, y opcionalmente <code>origen</code>, <code>endemica</code>,
+          <code> fuente</code> y <code>fechaFuente</code>.
+        </p>
+        <p style={{ margin: '0 0 8px' }}>
+          <span className="chip">{cache.especies} especie(s) consultadas</span>{' '}
+          {cache.masAntigua && (
+            <span className="chip muted">la más antigua, {cache.masAntigua.slice(0, 10)}</span>
+          )}
+        </p>
+        <p className="muted" style={{ fontSize: 12, marginBottom: 8 }}>
+          Lo ya consultado responde después sin señal, con la fecha a la vista. Lo que nunca se
+          consultó queda como <b>«sin consultar»</b>, que no es lo mismo que «sin categoría».
+        </p>
+        <button className="btn ghost" onClick={async () => {
+          const n = await limpiarCache();
+          setCache(await estadoCache());
+          s.notify(`${n} consulta(s) borradas. Se vuelven a pedir al servicio.`);
+        }}>Borrar lo consultado y volver a preguntar</button>
       </section>
 
       {/* El modo no es una preferencia estética: es una condición de trabajo. */}

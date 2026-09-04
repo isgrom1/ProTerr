@@ -25,13 +25,7 @@
    "scelorchilus rubecula"
   ],
   "ambiguousCommonName": false,
-  "conservation": {
-   "rce": "LC",
-   "origin": "Nativa",
-   "endemic": true,
-   "migratory": false,
-   "source": "EJEMPLO - verificar con MMA"
-  }
+  "conservation": null
  },
  {
   "id": "tx_3b44949967",
@@ -167,13 +161,7 @@
    "rayadito"
   ],
   "ambiguousCommonName": false,
-  "conservation": {
-   "rce": "LC",
-   "origin": "Nativa",
-   "endemic": false,
-   "migratory": false,
-   "source": "EJEMPLO - verificar con MMA"
-  }
+  "conservation": null
  },
  {
   "id": "tx_41d1174ba1",
@@ -309,13 +297,7 @@
    "sephanoides sephaniodes"
   ],
   "ambiguousCommonName": false,
-  "conservation": {
-   "rce": "LC",
-   "origin": "Nativa",
-   "endemic": false,
-   "migratory": false,
-   "source": "EJEMPLO - verificar con MMA"
-  }
+  "conservation": null
  },
  {
   "id": "tx_cdbcdb8487",
@@ -646,13 +628,7 @@
    "loica comun"
   ],
   "ambiguousCommonName": false,
-  "conservation": {
-   "rce": "LC",
-   "origin": "Nativa",
-   "endemic": false,
-   "migratory": false,
-   "source": "EJEMPLO - verificar con MMA"
-  }
+  "conservation": null
  },
  {
   "id": "tx_606c0f0cef",
@@ -1085,13 +1061,7 @@
    "tiuque"
   ],
   "ambiguousCommonName": false,
-  "conservation": {
-   "rce": "LC",
-   "origin": "Nativa",
-   "endemic": false,
-   "migratory": false,
-   "source": "EJEMPLO - verificar con MMA"
-  }
+  "conservation": null
  },
  {
   "id": "tx_7c1b33dc17",
@@ -1308,14 +1278,7 @@
    "vultur gryphus"
   ],
   "ambiguousCommonName": false,
-  "conservation": {
-   "rce": "VU",
-   "origin": "Nativa",
-   "endemic": false,
-   "migratory": false,
-   "legalProtection": "Ley de Caza",
-   "source": "EJEMPLO - verificar con MMA"
-  }
+  "conservation": null
  },
  {
   "id": "tx_98e6412ed2",
@@ -1559,13 +1522,7 @@
    "paloma"
   ],
   "ambiguousCommonName": false,
-  "conservation": {
-   "rce": "NE",
-   "origin": "Exótica asilvestrada",
-   "endemic": false,
-   "migratory": false,
-   "source": "EJEMPLO - verificar con MMA"
-  }
+  "conservation": null
  },
  {
   "id": "tx_470451c51a",
@@ -2217,14 +2174,7 @@
    "spheniscus humboldti"
   ],
   "ambiguousCommonName": false,
-  "conservation": {
-   "rce": "VU",
-   "origin": "Nativa",
-   "endemic": false,
-   "migratory": false,
-   "legalProtection": "Ley de Caza",
-   "source": "EJEMPLO - verificar con MMA"
-  }
+  "conservation": null
  },
  {
   "id": "tx_275f8df6d2",
@@ -2552,14 +2502,7 @@
    "zorro culpeo"
   ],
   "ambiguousCommonName": false,
-  "conservation": {
-   "rce": "LC",
-   "origin": "Nativa",
-   "endemic": false,
-   "migratory": false,
-   "legalProtection": "Ley de Caza",
-   "source": "EJEMPLO - verificar con MMA"
-  }
+  "conservation": null
  },
  {
   "id": "tx_e31590f7f4",
@@ -2619,14 +2562,7 @@
    "zorro de darwin"
   ],
   "ambiguousCommonName": false,
-  "conservation": {
-   "rce": "EN",
-   "origin": "Nativa",
-   "endemic": true,
-   "migratory": false,
-   "legalProtection": "Ley de Caza",
-   "source": "EJEMPLO - verificar con MMA"
-  }
+  "conservation": null
  },
  {
   "id": "tx_30915fb04f",
@@ -2686,14 +2622,7 @@
    "leopardus guigna"
   ],
   "ambiguousCommonName": false,
-  "conservation": {
-   "rce": "VU",
-   "origin": "Nativa",
-   "endemic": false,
-   "migratory": false,
-   "legalProtection": "Ley de Caza",
-   "source": "EJEMPLO - verificar con MMA"
-  }
+  "conservation": null
  },
  {
   "id": "tx_bd883dc4c2",
@@ -2829,14 +2758,7 @@
    "lontra provocax"
   ],
   "ambiguousCommonName": false,
-  "conservation": {
-   "rce": "EN",
-   "origin": "Nativa",
-   "endemic": false,
-   "migratory": false,
-   "legalProtection": "Ley de Caza",
-   "source": "EJEMPLO - verificar con MMA"
-  }
+  "conservation": null
  },
  {
   "id": "tx_54d54f3608",
@@ -2999,14 +2921,7 @@
    "huemul"
   ],
   "ambiguousCommonName": false,
-  "conservation": {
-   "rce": "EN",
-   "origin": "Nativa",
-   "endemic": false,
-   "migratory": false,
-   "legalProtection": "Monumento Natural",
-   "source": "EJEMPLO - verificar con MMA"
-  }
+  "conservation": null
  },
  {
   "id": "tx_b0dbcdca2f",
@@ -3034,14 +2949,7 @@
    "pudu puda"
   ],
   "ambiguousCommonName": false,
-  "conservation": {
-   "rce": "VU",
-   "origin": "Nativa",
-   "endemic": false,
-   "migratory": false,
-   "legalProtection": "Monumento Natural",
-   "source": "EJEMPLO - verificar con MMA"
-  }
+  "conservation": null
  },
  {
   "id": "tx_f021884076",
@@ -3153,14 +3061,7 @@
    "chinchilla lanigera"
   ],
   "ambiguousCommonName": false,
-  "conservation": {
-   "rce": "EN",
-   "origin": "Nativa",
-   "endemic": true,
-   "migratory": false,
-   "legalProtection": "Ley de Caza",
-   "source": "EJEMPLO - verificar con MMA"
-  }
+  "conservation": null
  },
  {
   "id": "tx_af2998af64",
@@ -3549,13 +3450,7 @@
    "oryctolagus cuniculus"
   ],
   "ambiguousCommonName": false,
-  "conservation": {
-   "rce": "NE",
-   "origin": "Exótica",
-   "endemic": false,
-   "migratory": false,
-   "source": "EJEMPLO - verificar con MMA"
-  }
+  "conservation": null
  },
  {
   "id": "tx_834579d372",
@@ -3583,13 +3478,7 @@
    "liebre"
   ],
   "ambiguousCommonName": false,
-  "conservation": {
-   "rce": "NE",
-   "origin": "Exótica",
-   "endemic": false,
-   "migratory": false,
-   "source": "EJEMPLO - verificar con MMA"
-  }
+  "conservation": null
  },
  {
   "id": "tx_6880bfb187",
@@ -3833,13 +3722,7 @@
    "liolaemus zapallarensis"
   ],
   "ambiguousCommonName": false,
-  "conservation": {
-   "rce": "NT",
-   "origin": "Nativa",
-   "endemic": true,
-   "migratory": false,
-   "source": "EJEMPLO - verificar con MMA"
-  }
+  "conservation": null
  },
  {
   "id": "tx_5d752c41ba",
@@ -4167,13 +4050,7 @@
    "sapito de cuatro ojos"
   ],
   "ambiguousCommonName": false,
-  "conservation": {
-   "rce": "LC",
-   "origin": "Nativa",
-   "endemic": false,
-   "migratory": false,
-   "source": "EJEMPLO - verificar con MMA"
-  }
+  "conservation": null
  },
  {
   "id": "tx_b036639f61",
@@ -4201,14 +4078,7 @@
    "rhinoderma darwinii"
   ],
   "ambiguousCommonName": false,
-  "conservation": {
-   "rce": "EN",
-   "origin": "Nativa",
-   "endemic": false,
-   "migratory": false,
-   "legalProtection": "Ley de Caza",
-   "source": "EJEMPLO - verificar con MMA"
-  }
+  "conservation": null
  },
  {
   "id": "tx_b5157a2fe9",

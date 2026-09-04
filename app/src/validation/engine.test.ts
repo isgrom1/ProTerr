@@ -9,6 +9,15 @@ const taxa = taxaSeed as unknown as Taxon[];
 const byName = (n: string) => taxa.find((t) => t.commonName === n)!;
 const resolveTaxon = (id: string) => taxa.find((t) => t.id === id);
 
+/**
+ * El catálogo ya no trae categorías: se consultan en línea. Las pruebas las
+ * ponen a mano, lo que además deja explícito qué se está probando.
+ */
+const CONSERVACION = { rce: 'VU', rceDecree: null, iucn: null, origin: 'Nativa', endemic: false, migratory: false, source: 'RCE de prueba' };
+const conCategoria = (t: Taxon): Taxon => ({ ...t, conservation: CONSERVACION as never });
+const conOrigen = (t: Taxon, origin: string): Taxon =>
+  ({ ...t, conservation: { ...CONSERVACION, rce: null, origin } as never });
+
 function draftOf(patch: Partial<ObservationDraft>): ObservationDraft {
   return {
     ...emptyDraft('d1', 'voz'),
@@ -138,7 +147,7 @@ describe('recordatorios y preguntas', () => {
 
 describe('aristas nuevas', () => {
   it('una especie amenazada exige fotografía y coordenada', () => {
-    const condor = byName('Cóndor');
+    const condor = conCategoria(byName('Cóndor'));
     expect(requirementFor(DEFAULT_PROFILE, 'photos', { method: 'transecto' })).toBe('optional');
     expect(requirementFor(DEFAULT_PROFILE, 'photos', { method: 'transecto', threatened: true })).toBe('required');
     const d = draftOf({ taxonId: condor.id, recordType: 'Individuo', individualCount: 1 });
@@ -147,7 +156,7 @@ describe('aristas nuevas', () => {
   });
 
   it('avisa la categoría de conservación con su fuente en el momento del registro', () => {
-    const condor = byName('Cóndor');
+    const condor = conCategoria(byName('Cóndor'));
     const d = draftOf({ taxonId: condor.id, recordType: 'Individuo', individualCount: 1, mediaIds: ['m1'] });
     const r = validateDraft(d, { profile: DEFAULT_PROFILE, taxon: condor, resolveTaxon });
     const aviso = r.issues.find((i) => i.field === 'conservation')!;
@@ -156,7 +165,7 @@ describe('aristas nuevas', () => {
   });
 
   it('marca las exóticas, aunque no estén amenazadas', () => {
-    const paloma = byName('Paloma');
+    const paloma = conOrigen(byName('Paloma'), 'Exótica');
     const d = draftOf({ taxonId: paloma.id, recordType: 'Individuo', individualCount: 1 });
     const r = validateDraft(d, { profile: DEFAULT_PROFILE, taxon: paloma, resolveTaxon });
     expect(r.issues.some((i) => i.message.includes('exótica'))).toBe(true);
