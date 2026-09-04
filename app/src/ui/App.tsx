@@ -1,5 +1,7 @@
 import { lazy, Suspense, useEffect } from 'react';
 import { useStore, type Screen } from '../state/store';
+import { Icono, type IconName } from './Icono';
+import { applyModo, readModo } from './modo';
 import { Confirmar } from './screens/Confirmar';
 import { Registros } from './screens/Registros';
 import { Terreno } from './screens/Terreno';
@@ -11,18 +13,21 @@ const Resumen = lazy(() => import('./screens/Resumen').then((m) => ({ default: m
 const Ajustes = lazy(() => import('./screens/Ajustes').then((m) => ({ default: m.Ajustes })));
 const Jornada = lazy(() => import('./screens/Jornada').then((m) => ({ default: m.Jornada })));
 
-const TABS: Array<{ id: Screen; label: string; glyph: string }> = [
-  { id: 'terreno', label: 'Terreno', glyph: '🎙️' },
-  { id: 'confirmar', label: 'Confirmar', glyph: '✅' },
-  { id: 'registros', label: 'Registros', glyph: '📋' },
-  { id: 'jornada', label: 'Jornada', glyph: '📷' },
-  { id: 'resumen', label: 'Resumen', glyph: '📊' },
-  { id: 'ajustes', label: 'Ajustes', glyph: '⚙️' },
+const TABS: Array<{ id: Screen; label: string; icon: IconName }> = [
+  { id: 'terreno', label: 'Terreno', icon: 'microfono' },
+  { id: 'confirmar', label: 'Confirmar', icon: 'confirmar' },
+  { id: 'registros', label: 'Registros', icon: 'registros' },
+  { id: 'jornada', label: 'Jornada', icon: 'jornada' },
+  { id: 'resumen', label: 'Resumen', icon: 'resumen' },
+  { id: 'ajustes', label: 'Ajustes', icon: 'ajustes' },
 ];
 
 export function App() {
   const s = useStore();
   useEffect(() => { void s.init(); }, []);
+  // El modo guardado se aplica antes de pintar nada: encender la pantalla en
+  // blanco y corregir después ya arruinó la visión nocturna.
+  useEffect(() => { applyModo(readModo()); }, []);
 
   if (!s.ready) {
     return <div className="app"><main className="main"><p className="muted">Cargando catálogos…</p></main></div>;
@@ -62,7 +67,7 @@ export function App() {
       <nav className="tabs">
         {TABS.map((t) => (
           <button key={t.id} aria-current={s.screen === t.id} onClick={() => s.setScreen(t.id)}>
-            <span className="glyph" aria-hidden>{t.glyph}</span>
+            <span className="glyph" aria-hidden><Icono name={t.icon} /></span>
             {t.label}
             {t.id === 'confirmar' && s.drafts.length > 0 ? ` (${s.drafts.length})` : ''}
           </button>

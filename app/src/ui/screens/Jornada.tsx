@@ -97,7 +97,7 @@ export function Jornada() {
           </div>
           {summary.mislabelled > 0 && (
             <p className="chip error" style={{ marginTop: 10 }}>
-              ⚠️ {summary.mislabelled} foto(s) con la etiqueta de otro punto
+              {summary.mislabelled} foto(s) con la etiqueta de otro punto
             </p>
           )}
           {summary.unassigned > 0 && (
@@ -122,7 +122,7 @@ export function Jornada() {
             {desfasadas.length > 0 && (
               <div className="issue" data-severity="blocker">
                 <p>
-                  ⚠️ {desfasadas.length} foto(s) traen la etiqueta <b>
+                  {desfasadas.length} foto(s) traen la etiqueta <b>
                     {desfasadas[0].labelCheck.status === 'desfasada' ? desfasadas[0].labelCheck.label : ''}
                   </b>, pero el GPS las sitúa en <b>{group.station?.stationCode}</b>.
                 </p>

@@ -129,9 +129,9 @@ export function Resumen() {
       <section className="card">
         <h2>Pendientes</h2>
         {stats.needReview === 0 && stats.noPhoto === 0 && stats.noCount === 0 && <p className="muted">Nada pendiente.</p>}
-        {stats.needReview > 0 && <p className="chip warn">⚠️ {stats.needReview} registro(s) requieren revisión</p>}
-        {stats.noPhoto > 0 && <p className="chip">📷 {stats.noPhoto} registro(s) sin fotografía</p>}
-        {stats.noCount > 0 && <p className="chip warn">🔢 {stats.noCount} registro(s) sin abundancia</p>}
+        {stats.needReview > 0 && <p className="chip warn">{stats.needReview} registro(s) requieren revisión</p>}
+        {stats.noPhoto > 0 && <p className="chip">{stats.noPhoto} registro(s) sin fotografía</p>}
+        {stats.noCount > 0 && <p className="chip warn">{stats.noCount} registro(s) sin abundancia</p>}
         <button className="btn" style={{ marginTop: 8 }} onClick={() => s.setScreen('registros')}>Revisar pendientes</button>
       </section>
 

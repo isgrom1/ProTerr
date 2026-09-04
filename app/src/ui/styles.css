@@ -1,7 +1,18 @@
 /*
- * Interfaz de terreno: alto contraste, objetivos táctiles grandes, alcanzables
- * con una mano y legibles con sol directo. Modo oscuro por defecto porque es
- * lo que se usa al amanecer y al atardecer, que es cuando se muestrea.
+ * Interfaz de terreno. Hay TRES modos porque hay tres terrenos, y ninguno es
+ * una preferencia estética:
+ *
+ *   sombra  El de siempre. Fondo oscuro: ahorra batería en pantalla OLED y no
+ *           encandila en quebrada, al amanecer o al atardecer, que es cuando
+ *           se muestrea.
+ *   sol     Mediodía en el matorral. Negro sobre blanco, sin grises
+ *           intermedios y con trazos más gruesos: bajo sol directo la pantalla
+ *           pierde casi todo el contraste y los tonos medios desaparecen.
+ *   noche   Trabajo con visor nocturno (MTAN). SÓLO rojo sobre negro. Una
+ *           pantalla blanca destruye la adaptación a la oscuridad del ojo
+ *           durante varios minutos, y eso arruina la observación.
+ *
+ * El modo noche se enciende solo al elegir tránsito aéreo nocturno.
  */
 :root {
   --bg: #0f1a14;
@@ -16,15 +27,82 @@
   --error: #ff6b5e;
   --radius: 14px;
   --tap: 56px;
+  /* Grosor de trazo de los íconos: sube con sol directo. */
+  --stroke: 1.8;
   color-scheme: dark;
 }
+
+/* Sin modo elegido, manda el sistema. */
 @media (prefers-color-scheme: light) {
-  :root:not([data-theme='dark']) {
+  :root:not([data-modo]) {
     --bg: #f4f7f4; --surface: #ffffff; --surface-2: #eaf0ea; --line: #d3ded5;
     --text: #14231a; --muted: #5b6f62; --accent: #0f7a45; --accent-ink: #ffffff;
     --warn: #8a5a00; --error: #b3261e; color-scheme: light;
   }
 }
+
+:root[data-modo='sombra'] {
+  --bg: #0f1a14; --surface: #17241d; --surface-2: #1f3128; --line: #2c4436;
+  --text: #eaf5ee; --muted: #9db3a6; --accent: #3ddc84; --accent-ink: #06301a;
+  --warn: #ffc247; --error: #ff6b5e; --stroke: 1.8; color-scheme: dark;
+}
+
+/* Blanco puro y negro casi puro: el máximo contraste que da la pantalla. */
+:root[data-modo='sol'] {
+  --bg: #ffffff; --surface: #ffffff; --surface-2: #eef1ee; --line: #101614;
+  --text: #050807; --muted: #33413a; --accent: #0a5c34; --accent-ink: #ffffff;
+  --warn: #7a3d00; --error: #96130c; --stroke: 2.6; color-scheme: light;
+}
+:root[data-modo='sol'] .card,
+:root[data-modo='sol'] .btn,
+:root[data-modo='sol'] .method,
+:root[data-modo='sol'] select,
+:root[data-modo='sol'] input,
+:root[data-modo='sol'] textarea { border-width: 2px; }
+:root[data-modo='sol'] .chip { border-width: 2px; font-weight: 700; }
+:root[data-modo='sol'] .muted { color: var(--muted); }
+
+/* Un solo canal de color. Nada blanco, nada azul, nada verde. */
+:root[data-modo='noche'] {
+  --bg: #070403; --surface: #120806; --surface-2: #1c0d09; --line: #4a1f16;
+  --text: #e08a6f; --muted: #9c5540; --accent: #8c3a2e; --accent-ink: #ffd9cc;
+  --warn: #c0603c; --error: #e0503a; --stroke: 2.2; color-scheme: dark;
+}
+/* En modo noche nada puede emitir luz blanca ni azul, ni siquiera una foto. */
+:root[data-modo='noche'] img,
+:root[data-modo='noche'] video { filter: grayscale(1) sepia(1) hue-rotate(-28deg) saturate(3) brightness(.65); }
+:root[data-modo='noche'] /* Elegir el formato de salida es una decisión de tres opciones muy distintas.
+   Un desplegable las hace ver equivalentes; un cuadro deja ver cuál es cuál. */
+.formatos { display: grid; gap: 10px; }
+.formato {
+  position: relative;
+  display: grid; gap: 3px; text-align: left;
+  padding: 14px 16px;
+  border: 1px solid var(--line); border-radius: var(--radius);
+  background: var(--surface-2); color: var(--text);
+  cursor: pointer; font: inherit;
+}
+.formato[aria-pressed='true'] {
+  border-color: var(--accent); border-width: 2px; padding: 13px 15px;
+  background: var(--surface);
+}
+.formato b { font-size: 16px; padding-right: 74px; }
+.formato .que { font-size: 13px; color: var(--muted); }
+.formato .cifras {
+  font-size: 12px; color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.formato .marca {
+  position: absolute; top: 12px; right: 14px;
+  font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--accent);
+}
+.formato .quitar {
+  position: absolute; bottom: 12px; right: 14px;
+  font-size: 12px; color: var(--error); text-decoration: underline;
+}
+
+.mic { box-shadow: none; }
 
 * { box-sizing: border-box; }
 body {
@@ -112,6 +190,37 @@ textarea { min-height: 72px; }
 }
 /* Marca la que está en curso hoy en esta estación, para no repetirla. */
 .method .done { font-size: 10px; opacity: .8; font-weight: 700; }
+
+/* Elegir el formato de salida es una decisión de tres opciones muy distintas.
+   Un desplegable las hace ver equivalentes; un cuadro deja ver cuál es cuál. */
+.formatos { display: grid; gap: 10px; }
+.formato {
+  position: relative;
+  display: grid; gap: 3px; text-align: left;
+  padding: 14px 16px;
+  border: 1px solid var(--line); border-radius: var(--radius);
+  background: var(--surface-2); color: var(--text);
+  cursor: pointer; font: inherit;
+}
+.formato[aria-pressed='true'] {
+  border-color: var(--accent); border-width: 2px; padding: 13px 15px;
+  background: var(--surface);
+}
+.formato b { font-size: 16px; padding-right: 74px; }
+.formato .que { font-size: 13px; color: var(--muted); }
+.formato .cifras {
+  font-size: 12px; color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.formato .marca {
+  position: absolute; top: 12px; right: 14px;
+  font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--accent);
+}
+.formato .quitar {
+  position: absolute; bottom: 12px; right: 14px;
+  font-size: 12px; color: var(--error); text-decoration: underline;
+}
 
 .mic {
   width: 100%; min-height: 128px; border-radius: 22px; border: none;

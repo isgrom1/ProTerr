@@ -114,7 +114,7 @@ function DraftCard({ draft, index }: { draft: ObservationDraft; index: number })
         return (
           <div className="issue" data-severity={flag.level === 'amenazada' ? 'blocker' : 'info'}>
             <p>
-              {flag.level === 'amenazada' && <strong>⚠️ {flag.badge}</strong>}
+              {flag.level === 'amenazada' && <strong>{flag.badge}</strong>}
               {flag.level !== 'amenazada' && flag.badge && <span>{flag.badge}</span>}
               {flag.traits.length > 0 && <> · {flag.traits.join(' · ')}</>}
             </p>
@@ -143,22 +143,22 @@ function DraftCard({ draft, index }: { draft: ObservationDraft; index: number })
       )}
 
       <p style={{ margin: '10px 0' }}>
-        <span className="chip">📍 {station?.stationCode ?? 'sin estación'}</span>{' '}
+        <span className="chip">{station?.stationCode ?? 'sin estación'}</span>{' '}
         {draft.eventDate && draft.eventDate !== hoy() && (
-          <><span className="chip warn">📅 {draft.eventDate}</span>{' '}</>
+          <><span className="chip warn">{draft.eventDate}</span>{' '}</>
         )}
-        <span className="chip">🕐 {draft.eventTime}</span>{' '}
-        <span className="chip">{recordGlyph(draft.recordType)} {draft.recordType}</span>{' '}
-        <span className="chip">🔢 {draft.individualCount ?? 'sin abundancia'}</span>
+        <span className="chip">{draft.eventTime}</span>{' '}
+        <span className="chip">{draft.recordType}</span>{' '}
+        <span className="chip">{draft.individualCount ?? 'sin abundancia'}</span>
         {draft.sex && draft.sex !== 'Indeterminado' && <> <span className="chip">{draft.sex}</span></>}
         {draft.behaviour && <> <span className="chip">{draft.behaviour}</span></>}
         {draft.identificationConfidence !== 'seguro' && (
           <> <span className="chip warn">ID {draft.identificationConfidence}</span></>
         )}
         {draft.detectionDistanceMeters != null && (
-          <> <span className="chip">↔ {draft.detectionDistanceMeters} m</span></>
+          <> <span className="chip">{draft.detectionDistanceMeters} m</span></>
         )}
-        {isAerial && draft.aerial?.flightDirection && <> <span className="chip">↗ {draft.aerial.flightDirection}</span></>}
+        {isAerial && draft.aerial?.flightDirection && <> <span className="chip">{draft.aerial.flightDirection}</span></>}
       </p>
 
       {/* Preguntas y pendientes: sólo lo accionable, nunca campos derivables. */}
@@ -468,11 +468,3 @@ function utmLabel(fix: { latitude: number; longitude: number }, zone?: number): 
   return `UTM ${utm.zone}${utm.hemisphere} ${Math.round(utm.east)} / ${Math.round(utm.north)}`;
 }
 
-function recordGlyph(recordType: string | null): string {
-  switch (recordType) {
-    case 'Vocalización': case 'Registro de audio': return '🔊';
-    case 'Fecas': case 'Huella': case 'Plumas': case 'Muda': case 'Huesos': case 'Egagrópila': return '🐾';
-    case 'Madriguera': case 'Cururera': case 'Nido': return '🕳️';
-    default: return '👁️';
-  }
-}

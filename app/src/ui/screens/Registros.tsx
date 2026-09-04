@@ -44,7 +44,7 @@ export function Registros() {
                   {r.station?.stationCode ?? '—'} · {r.occurrence.recordType}
                   {r.occurrence.individualCount != null ? ` ×${r.occurrence.individualCount}` : ''}
                 </span>
-                {flagFor(r.taxon).level === 'amenazada' && <span className="chip error" title={flagFor(r.taxon).detail ?? ''}>⚠️</span>}
+                {flagFor(r.taxon).level === 'amenazada' && <span className="chip error" title={flagFor(r.taxon).detail ?? ''}>!</span>}
                 {r.occurrence.reviewState === 'validado' && <span className="chip ok" title="Validado">✔</span>}
                 <span className={`dot ${r.occurrence.syncState}`} />
                 <button className="btn ghost" style={{ flex: '0 0 auto', minHeight: 40, padding: '6px 12px' }}

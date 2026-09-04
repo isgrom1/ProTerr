@@ -9,6 +9,8 @@ import { useEffect, useRef, useState } from 'react';
 import { formatDistance, formatDuration } from '../../effort/session';
 import { createRecognizer, beep } from '../../speech/stt';
 import { useStore } from '../../state/store';
+import { Icono, ICONO_METODO } from '../Icono';
+import { modoParaMetodo } from '../modo';
 import { useWakeLock } from '../wakeLock';
 
 export function Terreno() {
@@ -123,9 +125,15 @@ export function Terreno() {
               const hechaHoy = doneToday.has(m);
               return (
                 <button key={m} type="button" className="method" aria-pressed={activa}
-                  onClick={() => s.select({ method: m })}
+                  onClick={() => {
+                    s.select({ method: m });
+                    // De noche, con visor, no hay tiempo de acordarse del modo.
+                    const modo = modoParaMetodo(m);
+                    if (modo === 'noche') s.notify('Modo noche: sólo rojo, para no perder la visión nocturna.');
+                    if (modo === 'sombra') s.notify('De vuelta al modo sombra.');
+                  }}
                   title={METHOD_HINT[m] ?? METHOD_LABELS[m] ?? m}>
-                  <span className="glyph" aria-hidden>{METHOD_GLYPH[m] ?? '📋'}</span>
+                  <span className="glyph" aria-hidden><Icono name={ICONO_METODO[m] ?? 'otro'} size={28} /></span>
                   <span>{METHOD_LABELS[m] ?? m}</span>
                   {hechaHoy && <span className="done">✓ hoy</span>}
                 </button>
@@ -176,9 +184,9 @@ export function Terreno() {
         <section className="card" style={{ marginBottom: 12, borderColor: 'var(--accent)' }}>
           <h2>Track activo</h2>
           <p style={{ margin: '0 0 10px' }}>
-            <span className="chip ok">⏱ {s.effort?.durationMinutes != null ? formatDuration(s.effort.durationMinutes) : '0 min'}</span>{' '}
-            <span className="chip ok">📏 {s.effort?.distanceMeters != null ? formatDistance(s.effort.distanceMeters) : '—'}</span>{' '}
-            <span className="chip">📌 {(s.activeEvent.waypoints ?? []).length} punto(s)</span>
+            <span className="chip ok">{s.effort?.durationMinutes != null ? formatDuration(s.effort.durationMinutes) : '0 min'}</span>{' '}
+            <span className="chip ok">{s.effort?.distanceMeters != null ? formatDistance(s.effort.distanceMeters) : '—'}</span>{' '}
+            <span className="chip">{(s.activeEvent.waypoints ?? []).length} punto(s)</span>
           </p>
           {(s.activeEvent.waypoints ?? []).length > 0 && (
             <p className="muted" style={{ fontSize: 12, margin: '0 0 10px' }}>
@@ -195,7 +203,7 @@ export function Terreno() {
       )}
 
       <button className="mic" data-listening={listening} onClick={toggleMic}>
-        <span className="glyph" aria-hidden>🎙️</span>
+        <span className="glyph" aria-hidden><Icono name="microfono" size={40} /></span>
         {listening ? 'Escuchando…' : 'Registrar observación'}
         <small>{heard || '"Chucao, uno, vocalización"'}</small>
       </button>
@@ -249,20 +257,12 @@ export function Terreno() {
           ))}
         </ul>
         {s.sync.pending > 0 && (
-          <p className="chip warn" style={{ marginTop: 8 }}>⚠️ {s.sync.pending} registro(s) sin sincronizar</p>
+          <p className="chip warn" style={{ marginTop: 8 }}>{s.sync.pending} registro(s) sin sincronizar</p>
         )}
       </section>
     </>
   );
 }
-
-/** Un ícono por metodología: se reconoce antes de leer la palabra. */
-export const METHOD_GLYPH: Record<string, string> = {
-  transecto: '🥾', playback_aves: '🔊', playback_anfibios: '🐸',
-  camara_trampa: '📷', trampa_sherman: '🪤', songmeter: '🎧',
-  transito_aereo: '🦅', transito_aereo_nocturno: '🌙',
-  punto_conteo: '⏱️', atropello: '🛣️', registro_oportunista: '👀', otro: '📋',
-};
 
 /** Qué cambia al elegirla: lo que la app va a pedir y lo que no. */
 export const METHOD_HINT: Record<string, string> = {

@@ -20,7 +20,15 @@ import type {
   Campaign, EnvironmentalConditions, GeoFix, MethodCode, Occurrence, Project,
   ReviewState, SamplingEvent, Station, StationSite, Taxon,
 } from '../domain/types';
+import { SEA_DWC_TEMPLATE } from '../export/seaTemplate';
 import { NATIVE_TEMPLATE, type ExportTemplate } from '../export/template';
+
+/**
+ * Plantillas que trae la app y no se pueden borrar: el formato nativo y la
+ * planilla oficial del SEA. Siempre están disponibles aunque el usuario nunca
+ * haya importado nada.
+ */
+const PLANTILLAS_BASE = [NATIVE_TEMPLATE, SEA_DWC_TEMPLATE];
 import { suggestStations, type StationSuggestion } from '../geo/stations';
 import { toUtm } from '../geo/utm';
 import { parseCommand, type VoiceCommand } from '../nlp/commands';
@@ -199,7 +207,7 @@ export const useStore = create<State>((set, get) => ({
   banner: null,
   projects: [], campaigns: [], stations: [], taxonIndex: null, vocabularies: {},
   profile: DEFAULT_PROFILE,
-  templates: [NATIVE_TEMPLATE],
+  templates: PLANTILLAS_BASE,
   templateId: NATIVE_TEMPLATE.id,
   projectId: null, campaignId: null, stationId: null, method: null, stationConfirmed: false,
   plan: null, deferredAlternative: null,
@@ -222,7 +230,8 @@ export const useStore = create<State>((set, get) => ({
       taxonIndex: new TaxonIndex(taxa),
       vocabularies: Object.fromEntries(vocab.map((v) => [v.name, v.values])),
       profile,
-      templates: templates.length ? templates : [NATIVE_TEMPLATE],
+      // Las de la app primero; las importadas se suman sin reemplazarlas.
+      templates: [...PLANTILLAS_BASE, ...templates.filter((t) => !PLANTILLAS_BASE.some((b) => b.id === t.id))],
       templateId: globalThis.localStorage?.getItem('proterr.templateId') ?? NATIVE_TEMPLATE.id,
       projectId: project?.id ?? null,
       campaignId: campaigns.find((c) => c.projectId === project?.id)?.id ?? null,

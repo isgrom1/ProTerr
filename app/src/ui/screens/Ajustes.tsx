@@ -7,6 +7,8 @@ import { useRef, useState } from 'react';
 import { db } from '../../db/db';
 import { seedCatalogs } from '../../db/seed';
 import { EXPORT_FIELDS } from '../../export/fields';
+import { Icono } from '../Icono';
+import { MODOS, readModo, setModo, type Modo } from '../modo';
 import {
   fieldsWithoutColumn, toTemplate, detectTemplate,
   type SheetOverride, type TemplateDetection,
@@ -44,6 +46,7 @@ export function Ajustes() {
   // fila de encabezado obliga a volver a leerlo, no a parchar el resultado.
   const [templateFile, setTemplateFile] = useState<ArrayBuffer | null>(null);
   const [overrides, setOverrides] = useState<Record<string, SheetOverride>>({});
+  const [modo, setModoLocal] = useState<Modo | null>(() => readModo());
   const [kml, setKml] = useState<StationCandidate[] | null>(null);
   const [chosen, setChosen] = useState<Set<string>>(new Set());
   const [prefix, setPrefix] = useState('');
@@ -184,37 +187,64 @@ export function Ajustes() {
         }}>Actualizar catálogos</button>
       </section>
 
-      {/* Cada consultora trae su propio formulario. ProTerr no lleva ninguno
-          incorporado: se sube el archivo, se revisa el mapeo y se exporta con
-          ese formato. */}
+      {/* El modo no es una preferencia estética: es una condición de trabajo. */}
       <section className="card">
-        <h2>Formatos de exportación</h2>
-        <p className="muted" style={{ fontSize: 13 }}>
-          Sube el formulario de tu consultora y ProTerr aprenderá a exportar con esa forma exacta.
-          El archivo no se guarda: sólo se conserva el mapeo de columnas.
-        </p>
-        <ul className="list">
-          {s.templates.map((t) => (
-            <li key={t.id}>
-              <span className="name">
-                {t.name}
-                <div className="muted" style={{ fontSize: 12 }}>
-                  {t.organization ? `${t.organization} · ` : ''}
-                  {t.sheets.length} hoja(s) · {t.sheets.reduce((n, sh) => n + sh.columns.length, 0)} columnas
-                </div>
-              </span>
-              {t.id === s.templateId && <span className="chip ok">en uso</span>}
-              {t.id !== s.templateId && (
-                <button className="btn ghost" style={{ flex: '0 0 auto', minHeight: 40, padding: '6px 12px' }}
-                  onClick={() => s.selectTemplate(t.id)}>Usar</button>
-              )}
-              {!t.builtin && (
-                <button className="btn ghost" style={{ flex: '0 0 auto', minHeight: 40, padding: '6px 10px', color: 'var(--error)' }}
-                  onClick={() => void s.deleteTemplate(t.id)}>✕</button>
-              )}
-            </li>
+        <h2>Pantalla</h2>
+        <div className="formatos">
+          {MODOS.map((m) => (
+            <button key={m.id} type="button" className="formato" aria-pressed={modo === m.id}
+              onClick={() => { setModo(m.id); setModoLocal(m.id); }}>
+              <b><Icono name={m.id} size={18} /> {m.label}</b>
+              <span className="que">{m.detalle}</span>
+              {modo === m.id && <span className="marca">En uso</span>}
+            </button>
           ))}
-        </ul>
+        </div>
+        <p className="muted" style={{ fontSize: 12, marginBottom: 0 }}>
+          El modo noche se enciende solo al elegir tránsito aéreo nocturno o playback de
+          anfibios. Si lo cambias a mano, tu elección manda por el resto del día.
+        </p>
+      </section>
+
+      {/* Con qué forma sale el Excel. Se elige tocando un cuadro, no leyendo
+          una lista: son tres decisiones muy distintas y tienen que verse. */}
+      <section className="card">
+        <h2>Con qué formato sale el Excel</h2>
+        <p className="muted" style={{ fontSize: 13, marginTop: 0 }}>
+          Elige uno. Se puede cambiar cuando quieras y no afecta a los registros ya guardados:
+          los mismos datos salen con la forma que elijas.
+        </p>
+
+        <div className="formatos">
+          {s.templates.map((t) => {
+            const activo = t.id === s.templateId;
+            const columnas = t.sheets.reduce((n, sh) => n + sh.columns.length, 0);
+            return (
+              <button key={t.id} type="button" className="formato" aria-pressed={activo}
+                onClick={() => s.selectTemplate(t.id)}>
+                <b>{t.name}</b>
+                <span className="que">{DESCRIPCION_FORMATO[t.id] ?? t.organization ?? 'Formato importado'}</span>
+                <span className="cifras">{t.sheets.length} hoja(s) · {columnas} columnas</span>
+                {activo && <span className="marca">En uso</span>}
+                {!t.builtin && !PROPIAS.includes(t.id) && (
+                  <span className="quitar" role="button" tabIndex={0}
+                    onClick={(e) => { e.stopPropagation(); void s.deleteTemplate(t.id); }}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); void s.deleteTemplate(t.id); } }}>
+                    Quitar
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        <h3 style={{ fontSize: 14, margin: '18px 0 6px' }}>¿Tu consultora usa otra planilla?</h3>
+        <p className="muted" style={{ fontSize: 13, marginTop: 0 }}>
+          Sube su archivo —vacío o con datos, da lo mismo— y ProTerr aprende su forma exacta.
+          <b> El archivo no se guarda</b>: se lee en memoria y se descarta; lo único que queda es
+          el mapeo de columnas, que es tuyo. En el paso siguiente vas a poder revisar y corregir
+          a mano cada columna, qué fila es el encabezado y qué hojas se usan.
+        </p>
 
         <div className="field" style={{ marginTop: 12 }}>
           <label htmlFor="tplfile">Cargar el formulario de una consultora</label>
@@ -423,6 +453,14 @@ function TemplateReview({ detection, name, onName, organization, onOrganization,
     </div>
   );
 }
+
+/** Qué es cada formato que trae la app, en una línea. */
+const DESCRIPCION_FORMATO: Record<string, string> = {
+  'proterr-nativo': 'El de ProTerr. Una hoja por metodología, más el plan de terreno.',
+  'sea-fauna-darwin-core': 'La que exige el SEIA para la línea base (Res. Ex. 202299101888).',
+};
+/** Formatos que trae la app y no se pueden borrar. */
+const PROPIAS = ['proterr-nativo', 'sea-fauna-darwin-core'];
 
 const SCOPES: Array<[string, string]> = [
   ['registros', 'Registros de fauna'],
