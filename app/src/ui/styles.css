@@ -85,6 +85,34 @@ textarea { min-height: 72px; }
 .btn.danger { color: var(--error); border-color: var(--error); background: transparent; }
 .btn:disabled { opacity: .45; }
 
+/* Elegir metodología es lo que más se hace en el día: se sale temprano a
+   revisar Sherman, después el transecto, en la tarde el playback. Con guante y
+   a pleno sol, un desplegable de doce opciones es lo peor posible. */
+.methods {
+  display: flex; gap: 8px; overflow-x: auto; padding: 2px 2px 8px;
+  scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch;
+}
+.methods::-webkit-scrollbar { height: 4px; }
+.methods::-webkit-scrollbar-thumb { background: var(--line); border-radius: 4px; }
+.method {
+  flex: 0 0 auto; scroll-snap-align: start;
+  min-width: 92px; min-height: 76px; padding: 10px 12px;
+  display: grid; gap: 3px; place-items: center; text-align: center;
+  border: 1px solid var(--line); border-radius: 14px;
+  background: var(--surface-2); color: var(--text);
+  font-size: 12px; font-weight: 600; line-height: 1.15; cursor: pointer;
+  transition: transform .12s ease, background .12s ease, border-color .12s ease;
+}
+.method .glyph { font-size: 26px; line-height: 1; }
+.method:active { transform: scale(.96); }
+.method[aria-pressed='true'] {
+  background: var(--accent); color: var(--accent-ink);
+  border-color: transparent; font-weight: 800;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, .28);
+}
+/* Marca la que está en curso hoy en esta estación, para no repetirla. */
+.method .done { font-size: 10px; opacity: .8; font-weight: 700; }
+
 .mic {
   width: 100%; min-height: 128px; border-radius: 22px; border: none;
   background: var(--accent); color: var(--accent-ink);

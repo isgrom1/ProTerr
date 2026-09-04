@@ -162,6 +162,7 @@ export const EXPORT_FIELDS: ExportField[] = [
   { id: 'conservation.source', label: 'Fuente de conservación', group: 'Conservación', aliases: ['fuente conservacion', 'fuente de la clasificacion'], resolve: (r) => blank(r.taxon?.conservation?.source) },
 
   // --- Trazabilidad ---
+  { id: 'trace.deferredEntry', label: 'Anotado después', group: 'Trazabilidad', aliases: ['anotado despues', 'registro diferido', 'ingreso diferido'], resolve: (r) => yesNo(r.occurrence.deferredEntry) },
   { id: 'trace.occurrenceId', label: 'ID del registro', group: 'Trazabilidad', aliases: ['occurrenceid', 'id registro', 'uuid'], resolve: (r) => r.occurrence.occurrenceId },
   { id: 'trace.syncState', label: 'Estado de sincronización', group: 'Trazabilidad', aliases: ['estado sincronizacion', 'sincronizado'], resolve: (r) => ({ synced: 'Sincronizado', error: 'Error', pending: 'Pendiente' }[r.occurrence.syncState] ?? r.occurrence.syncState) },
   { id: 'trace.reviewState', label: 'Estado de revisión', group: 'Trazabilidad', aliases: ['estado de revision', 'revision', 'validado'], resolve: (r) => blank(r.occurrence.reviewState) },

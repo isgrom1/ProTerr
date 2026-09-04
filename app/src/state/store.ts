@@ -26,6 +26,7 @@ import { toUtm } from '../geo/utm';
 import { parseCommand, type VoiceCommand } from '../nlp/commands';
 import { parseUtterance, type ParsedHeader, type ParsedObservation } from '../nlp/parser';
 import { summarizePlan, type PlanSummary } from '../plan/coverage';
+import { resolveEntry } from '../plan/deferred';
 import { TaxonIndex } from '../nlp/taxonIndex';
 import { syncOutbox, syncStatus, type SyncStatus, type SyncTransport } from '../sync/engine';
 import { validateDraft, whatIsMissing, type ValidationResult } from '../validation/engine';
@@ -117,6 +118,11 @@ interface State {
   recordNotPerformed(reason?: string | null): Promise<void>;
   /** Cobertura del plan: qué se hizo, qué no se pudo y qué falta. */
   plan: PlanSummary | null;
+  /**
+   * La otra lectura posible de un registro de otro día, cuando la había.
+   * Se ofrece como botón en la tarjeta en vez de decidirla en silencio.
+   */
+  deferredAlternative: { label: string; method: MethodCode } | null;
   closeEffort(extra?: { distanceMeters?: number; trapCount?: number; trapNights?: number; noDetections?: boolean }): Promise<void>;
   /** Recorrido explícito: nada se graba sin que el usuario lo pida. */
   beginTrack(): Promise<void>;
@@ -196,7 +202,7 @@ export const useStore = create<State>((set, get) => ({
   templates: [NATIVE_TEMPLATE],
   templateId: NATIVE_TEMPLATE.id,
   projectId: null, campaignId: null, stationId: null, method: null, stationConfirmed: false,
-  plan: null,
+  plan: null, deferredAlternative: null,
   fix: null, gpsError: null, suggestions: [],
   drafts: [], validations: {}, lastUtterance: null,
   records: [], sync: { pending: 0, errored: 0, conflicts: 0 },
@@ -309,19 +315,39 @@ export const useStore = create<State>((set, get) => ({
     const effectiveMethod = parsed.method ?? method;
     if (parsed.method) set({ method: parsed.method });
 
+    // Lo que se anota en la casa. Un olvido del mismo muestreo entra tal cual;
+    // lo visto otro día va al punto pero NO al muestreo, para no falsear su
+    // esfuerzo. La decisión y su motivo viajan con el borrador.
+    const hoy = new Date().toISOString().slice(0, 10);
+    const decision = resolveEntry({
+      sightingDate: parsed.spokenDate?.iso ?? hoy,
+      today: hoy,
+      stationId: effectiveStation,
+      method: effectiveMethod,
+      events: await db.events.toArray(),
+    });
+
     const drafts = parsed.observations.map((o) =>
       draftFrom(o, {
-        projectId, campaignId, stationId: effectiveStation, method: effectiveMethod,
+        projectId, campaignId, stationId: effectiveStation, method: decision.method,
         recordedBy: session.userName,
       }, text));
+    for (const d of drafts) {
+      d.eventDate = decision.eventDate;
+      d.deferredEntry = decision.deferred;
+      d.deferredNotice = decision.notice;
+      d.dateTimeEditedByUser = decision.eventDate !== hoy;
+    }
 
+    set({ deferredAlternative: decision.alternative });
     for (const warning of parsed.warnings) get().notify(warning, 'warn');
+    if (decision.notice) get().notify(decision.notice, 'warn');
 
     // La línea de trampeo (o el punto de playback) es un sitio DENTRO de la
     // estación: se resuelve contra los que ya tiene y, si es nuevo, se agrega.
     // Perderlo obligaría a anotar a mano dónde cayó cada animal.
     if (parsed.siteName && effectiveStation) {
-      const siteId = await ensureSite(set, get, effectiveStation, parsed.siteName, effectiveMethod);
+      const siteId = await ensureSite(set, get, effectiveStation, parsed.siteName, decision.method);
       if (siteId) for (const d of drafts) d.siteId = siteId;
     }
 
@@ -370,6 +396,9 @@ export const useStore = create<State>((set, get) => ({
         ? { ...d, ...patch, dateTimeEditedByUser: d.dateTimeEditedByUser || 'eventDate' in patch || 'eventTime' in patch }
         : d)),
     }));
+    // Cambiar la fecha o la estación a mano tiene que avisar lo mismo que
+    // decir "ayer" en voz alta: es la misma situación por otra puerta.
+    if ('eventDate' in patch || 'stationId' in patch) void recheckDeferred(set, get, draftId);
     revalidate(set, get);
   },
 
@@ -794,6 +823,32 @@ async function ensureSite(
   await db.stations.put({ ...station, sites: [...station.sites, site] });
   set({ stations: await db.stations.toArray() });
   return site.id;
+}
+
+/**
+ * Vuelve a decidir dónde cae un registro cuando su fecha o su estación se
+ * editan a mano. Sin esto, elegir una fecha pasada en el calendario abriría un
+ * muestreo nuevo de ese día en silencio.
+ */
+async function recheckDeferred(
+  set: (partial: Partial<State>) => void, get: () => State, draftId: string,
+): Promise<void> {
+  const draft = get().drafts.find((d) => d.draftId === draftId);
+  if (!draft || !draft.stationId || !draft.method) return;
+  const hoy = new Date().toISOString().slice(0, 10);
+  const decision = resolveEntry({
+    sightingDate: draft.eventDate ?? hoy,
+    today: hoy,
+    stationId: draft.stationId,
+    method: draft.method,
+    events: await db.events.toArray(),
+  });
+  set({
+    deferredAlternative: decision.alternative,
+    drafts: get().drafts.map((d) => (d.draftId === draftId
+      ? { ...d, method: decision.method, deferredEntry: decision.deferred, deferredNotice: decision.notice }
+      : d)),
+  });
 }
 
 /** Recalcula la cobertura del plan con lo que hay guardado. */

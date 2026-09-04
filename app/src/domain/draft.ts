@@ -55,6 +55,10 @@ export interface ObservationDraft {
   trapNumber: string | null;
   /** Con crías, en celo, empollando. No es el estado vivo/muerto. */
   reproductiveCondition: string | null;
+  /** Se está anotando después del día del avistamiento. */
+  deferredEntry: boolean;
+  /** Qué se decidió hacer con un registro de otro día, y por qué. */
+  deferredNotice?: string | null;
   recapture: boolean | null;
 
   occurrenceFixRequested: boolean;
@@ -76,6 +80,7 @@ export function emptyDraft(draftId: string, source: RecordSource = 'manual'): Ob
     organismCondition: null, behaviour: null, notes: null, aerial: null,
     identificationConfidence: 'seguro', detectionDistanceMeters: null,
     organismId: null, trapNumber: null, reproductiveCondition: null, recapture: null,
+    deferredEntry: false, deferredNotice: null,
     occurrenceFixRequested: false, mediaIds: [], source, verbatimUtterance: null,
     acknowledgedPending: [],
   };

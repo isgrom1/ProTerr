@@ -30,6 +30,11 @@ export function Terreno() {
   const campaigns = s.campaigns.filter((c) => c.projectId === s.projectId);
   const today = new Date().toISOString().slice(0, 10);
   const todays = s.records.filter((r) => r.event.eventDate === today);
+  // Metodologías ya trabajadas hoy en la estación elegida: evita repetir un
+  // punto por descuido y deja ver de un vistazo qué falta ahí.
+  const doneToday = new Set(
+    todays.filter((r) => r.event.stationId === s.stationId).map((r) => r.event.method),
+  );
 
   async function submit(text: string) {
     if (!text.trim()) return;
@@ -99,18 +104,37 @@ export function Terreno() {
             </select>
           </div>
           <div className="field">
-            <label htmlFor="met">Metodología</label>
-            <select id="met" value={s.method ?? ''} onChange={(e) => s.select({ method: e.target.value as never })}>
-              {(project?.methods ?? []).map((m) => <option key={m} value={m}>{METHOD_LABELS[m] ?? m}</option>)}
+            <label htmlFor="est">Estación</label>
+            <select id="est" value={s.stationId ?? ''} onChange={(e) => s.select({ stationId: e.target.value })}>
+              <option value="">Seleccionar…</option>
+              {stations.map((st) => <option key={st.id} value={st.id}>{st.stationCode} · {st.habitat ?? 'sin ambiente'}</option>)}
             </select>
           </div>
         </div>
+
+        {/* La metodología cambia varias veces al día —Sherman temprano, después
+            el transecto, en la tarde el playback— y cambia lo que la app pide.
+            Va en botones grandes, no escondida en un desplegable. */}
         <div className="field">
-          <label htmlFor="est">Estación</label>
-          <select id="est" value={s.stationId ?? ''} onChange={(e) => s.select({ stationId: e.target.value })}>
-            <option value="">Seleccionar…</option>
-            {stations.map((st) => <option key={st.id} value={st.id}>{st.stationCode} · {st.habitat ?? 'sin ambiente'}</option>)}
-          </select>
+          <label>Metodología</label>
+          <div className="methods" role="group" aria-label="Metodología">
+            {(project?.methods ?? []).map((m) => {
+              const activa = s.method === m;
+              const hechaHoy = doneToday.has(m);
+              return (
+                <button key={m} type="button" className="method" aria-pressed={activa}
+                  onClick={() => s.select({ method: m })}
+                  title={METHOD_HINT[m] ?? METHOD_LABELS[m] ?? m}>
+                  <span className="glyph" aria-hidden>{METHOD_GLYPH[m] ?? '📋'}</span>
+                  <span>{METHOD_LABELS[m] ?? m}</span>
+                  {hechaHoy && <span className="done">✓ hoy</span>}
+                </button>
+              );
+            })}
+          </div>
+          {s.method && (
+            <p className="muted" style={{ fontSize: 12, margin: 0 }}>{METHOD_HINT[s.method] ?? ''}</p>
+          )}
         </div>
 
         {/* El GPS sugiere; nunca reemplaza una estación ya confirmada (§4). */}
@@ -231,6 +255,30 @@ export function Terreno() {
     </>
   );
 }
+
+/** Un ícono por metodología: se reconoce antes de leer la palabra. */
+export const METHOD_GLYPH: Record<string, string> = {
+  transecto: '🥾', playback_aves: '🔊', playback_anfibios: '🐸',
+  camara_trampa: '📷', trampa_sherman: '🪤', songmeter: '🎧',
+  transito_aereo: '🦅', transito_aereo_nocturno: '🌙',
+  punto_conteo: '⏱️', atropello: '🛣️', registro_oportunista: '👀', otro: '📋',
+};
+
+/** Qué cambia al elegirla: lo que la app va a pedir y lo que no. */
+export const METHOD_HINT: Record<string, string> = {
+  transecto: 'Recorrido a pie. Track y esfuerzo opcionales; sin campos de vuelo.',
+  playback_aves: 'Por punto de playback. Pide la respuesta al reproducir.',
+  playback_anfibios: 'Por punto de playback, de noche. Pide la respuesta.',
+  camara_trampa: 'Pide fotografía y acepta el número de la cámara.',
+  trampa_sherman: 'Pide la línea y el número de trampa; marca del individuo y recaptura.',
+  songmeter: 'Grabadora fija: el registro es de audio, sin conducta.',
+  transito_aereo: 'Pide dirección y altura de vuelo, origen y destino.',
+  transito_aereo_nocturno: 'MTAN: bloque horario y contra qué se estimó la altura.',
+  punto_conteo: 'Pide la distancia de detección, que es lo que da la densidad.',
+  atropello: 'Pide coordenada y estado del organismo.',
+  registro_oportunista: 'Fuera de muestreo: la coordenada es lo único que lo ubica.',
+  otro: 'Metodología libre.',
+};
 
 export const METHOD_LABELS: Record<string, string> = {
   transecto: 'Transecto', playback_aves: 'Playback aves', playback_anfibios: 'Playback anfibios',

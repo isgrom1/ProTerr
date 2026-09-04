@@ -91,7 +91,7 @@ export async function seedCatalogs(): Promise<SeedSummary> {
     utmHemisphere: SEED_HEMISPHERE,
     geodeticDatum: SEED_DATUM,
     requirementProfileId: 'linea-base-fauna',
-    methods: ['transecto', 'playback_aves', 'playback_anfibios', 'camara_trampa', 'trampa_sherman', 'songmeter', 'transito_aereo', 'transito_aereo_nocturno', 'otro'],
+    methods: ['transecto', 'playback_aves', 'playback_anfibios', 'camara_trampa', 'trampa_sherman', 'songmeter', 'transito_aereo', 'transito_aereo_nocturno', 'registro_oportunista', 'otro'],
   }));
 
   const campaigns: Campaign[] = [];

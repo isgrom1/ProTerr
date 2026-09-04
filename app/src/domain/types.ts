@@ -383,6 +383,12 @@ export interface Occurrence extends Auditable {
    */
   trapNumber?: string | null;
   /**
+   * Se escribió después del día del avistamiento: en la casa, revisando la
+   * jornada. El dato sirve igual; saber que no se anotó en el momento es
+   * parte de su trazabilidad.
+   */
+  deferredEntry?: boolean;
+  /**
    * dwc:reproductiveCondition. No es el estado del organismo (vivo/muerto):
    * es si estaba con crías, en celo, empollando. Varias consultoras lo piden
    * en columna propia y confundirlos arruina el dato.

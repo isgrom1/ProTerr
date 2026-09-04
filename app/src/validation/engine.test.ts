@@ -365,3 +365,24 @@ describe('MTAN: el nocturno no es el diurno con otro horario', () => {
     expect(whatIsMissing(r).join(' ')).toContain('referencia de altura');
   });
 });
+
+describe('registro fuera del muestreo', () => {
+  it('el registro oportunista vale aunque el proyecto no lo declare', () => {
+    // Es lo que se ve de paso, no una metodología que se planifique.
+    const d = draftOf({ method: 'registro_oportunista', taxonId: byName('Loica').id, recordType: 'Individuo' });
+    const r = validateDraft(d, {
+      profile: DEFAULT_PROFILE, taxon: byName('Loica'), resolveTaxon,
+      projectMethods: ['transecto', 'playback_aves'],
+    });
+    expect(r.issues.some((i) => i.message.includes('no está habilitada'))).toBe(false);
+  });
+
+  it('una metodología que sí se planifica y no está declarada, se avisa', () => {
+    const d = draftOf({ method: 'trampa_sherman', taxonId: byName('Loica').id, recordType: 'Individuo' });
+    const r = validateDraft(d, {
+      profile: DEFAULT_PROFILE, taxon: byName('Loica'), resolveTaxon,
+      projectMethods: ['transecto', 'playback_aves'],
+    });
+    expect(r.issues.some((i) => i.message.includes('no está habilitada'))).toBe(true);
+  });
+});

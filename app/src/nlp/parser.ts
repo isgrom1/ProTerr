@@ -18,6 +18,7 @@ import {
   INDIRECT_RECORD_TYPES, DEFAULT_LEXICONS, SLOPE_TERMS, SLOPE_TRIGGERS,
   type LexEntry, type Lexicons,
 } from './lexicon';
+import { findSpokenDate, type SpokenDate } from './dates';
 import { readNumber } from './numbers';
 import type { TaxonIndex, TaxonMatch } from './taxonIndex';
 import { fold } from './text';
@@ -80,6 +81,11 @@ export interface ParsedUtterance {
    * ("la línea asociada al punto 40"). Es un sitio DENTRO de la estación.
    */
   siteName: string | null;
+  /**
+   * Fecha dicha en la frase ("ayer", "el lunes"). Cuando existe, el registro
+   * no es de hoy: se está anotando en la casa lo que faltó.
+   */
+  spokenDate: SpokenDate | null;
   /** El usuario declaró explícitamente que no hubo detecciones en la estación. */
   noDetections: boolean;
   warnings: string[];
@@ -87,6 +93,8 @@ export interface ParsedUtterance {
 
 export interface ParseContext {
   taxonIndex: TaxonIndex;
+  /** Fecha contra la que se resuelve "ayer" o "el lunes". Por defecto, hoy. */
+  today?: Date;
   /** Códigos de estación conocidos, para reconocerlos aunque el STT los parta. */
   stationCodes?: string[];
   lexicons?: Lexicons;
@@ -173,7 +181,7 @@ export function parseUtterance(raw: string, ctx: ParseContext): ParsedUtterance 
   const result: ParsedUtterance = {
     raw, stationCode: null, method: null, observations: [],
     header: { opensPoint: false, weather: null, slopeAspect: null },
-    siteName: null,
+    siteName: null, spokenDate: null,
     noDetections: false, warnings: [],
   };
 
@@ -181,8 +189,20 @@ export function parseUtterance(raw: string, ctx: ParseContext): ParsedUtterance 
   if (NO_DETECTION_RE.test(fold(raw))) result.noDetections = true;
 
   for (const chunk of splitChunks(raw)) {
-    const tokens = fold(chunk).split(' ').filter(Boolean);
+    let tokens = fold(chunk).split(' ').filter(Boolean);
     if (!tokens.length) continue;
+
+    // La fecha se saca del fragmento antes de leer lo demás: si no, el "dos"
+    // de "hace dos días" se contaría como dos individuos.
+    const fecha = findSpokenDate(tokens, ctx.today ?? new Date());
+    if (fecha) {
+      result.spokenDate = fecha.date;
+      tokens = [
+        ...tokens.slice(0, fecha.start),
+        ...tokens.slice(fecha.start + fecha.date.length),
+      ];
+      if (!tokens.length) continue;
+    }
 
     // ¿Este fragmento abre una observación nueva? Sólo si nombra un taxón.
     // Si no nombra ninguna, es continuación de la anterior; y si todavía no

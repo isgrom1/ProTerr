@@ -308,6 +308,7 @@ export async function commitDraft(
     organismId: draft.organismId ?? null,
     trapNumber: draft.trapNumber ?? null,
     reproductiveCondition: draft.reproductiveCondition ?? null,
+    deferredEntry: draft.deferredEntry === true,
     recapture: draft.recapture ?? null,
     reviewState: 'terreno',
     reviewedBy: null,

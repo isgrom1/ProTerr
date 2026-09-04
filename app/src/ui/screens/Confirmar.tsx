@@ -15,6 +15,8 @@ import { useStore } from '../../state/store';
 import { requirementFor } from '../../validation/profiles';
 import { METHOD_LABELS } from './Terreno';
 
+const hoy = () => new Date().toISOString().slice(0, 10);
+
 /** Patrón de vuelo, tal como se anota en el monitoreo nocturno. */
 const TIPO_VUELO = ['Directo', 'En círculos', 'Ascendente', 'Descendente', 'Migratorio', 'Percha a percha'];
 
@@ -110,8 +112,30 @@ function DraftCard({ draft, index }: { draft: ObservationDraft; index: number })
         );
       })()}
 
+      {/* Lo que se anota en la casa no se guarda en silencio: el registro
+          sirve igual, pero hay que ver adónde va a quedar antes de aceptarlo. */}
+      {draft.deferredNotice && (
+        <div className="issue" data-severity="question" style={{ marginTop: 8 }}>
+          <p style={{ margin: 0 }}>{draft.deferredNotice}</p>
+          <div className="row" style={{ marginTop: 8 }}>
+            <button className="btn ghost" onClick={() => patch({ deferredNotice: null })}>
+              Está bien así
+            </button>
+            {s.deferredAlternative && (
+              <button className="btn" onClick={() => patch({
+                method: s.deferredAlternative!.method,
+                deferredNotice: null,
+              })}>{s.deferredAlternative.label}</button>
+            )}
+          </div>
+        </div>
+      )}
+
       <p style={{ margin: '10px 0' }}>
         <span className="chip">📍 {station?.stationCode ?? 'sin estación'}</span>{' '}
+        {draft.eventDate && draft.eventDate !== hoy() && (
+          <><span className="chip warn">📅 {draft.eventDate}</span>{' '}</>
+        )}
         <span className="chip">🕐 {draft.eventTime}</span>{' '}
         <span className="chip">{recordGlyph(draft.recordType)} {draft.recordType}</span>{' '}
         <span className="chip">🔢 {draft.individualCount ?? 'sin abundancia'}</span>

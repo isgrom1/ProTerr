@@ -254,7 +254,11 @@ export function validateDraft(draft: ObservationDraft, ctx: ValidationContext): 
       ],
     });
   }
-  if (draft.method && ctx.projectMethods?.length && !ctx.projectMethods.includes(draft.method)) {
+  // El registro oportunista no es una metodología planificada: es lo que se ve
+  // fuera del muestreo. Siempre vale, en cualquier proyecto.
+  const fueraDePlan = draft.method === 'registro_oportunista';
+  if (draft.method && !fueraDePlan && ctx.projectMethods?.length
+    && !ctx.projectMethods.includes(draft.method)) {
     issues.push({
       field: 'method', severity: 'info', level: 'event',
       message: 'La metodología seleccionada no está habilitada para este proyecto.',
