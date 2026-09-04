@@ -5,7 +5,7 @@
 import * as XLSX from 'xlsx';
 import { describe, expect, it } from 'vitest';
 import { buildWorkbook } from '../export/workbook';
-import { detectTemplate, toTemplate } from './template';
+import { detectTemplate, fieldsWithoutColumn, toTemplate } from './template';
 
 function workbook(sheets: Record<string, unknown[][]>): ArrayBuffer {
   const wb = XLSX.utils.book_new();
@@ -150,5 +150,66 @@ describe('encabezados con instrucciones adentro', () => {
     // Confundirlas convierte "Hembra con crías" en "Vivo" y se pierde el dato.
     expect(campo('Condición reproductiva')).toBe('occurrence.reproductiveCondition');
     expect(campo('Estado del organismo')).toBe('occurrence.condition');
+  });
+});
+
+describe('corregir a mano lo que la detección no acertó', () => {
+  // Planilla con dos filas decorativas y una fila de subtítulos: el detector
+  // puede elegir mal, y la persona tiene que poder decir cuál es.
+  const decorada = workbook({
+    'FORMULARIO': [
+      ['CONSULTORA Z', '', ''],
+      ['Proyecto:', 'Demo', ''],
+      ['Fecha', 'ID Estación', 'Nombre común'],
+      ['2026-06-02', 'EM01', 'Chercán'],
+      ['2026-06-02', 'EM02', 'Diuca'],
+    ],
+  });
+
+  it('ofrece las filas de arriba para elegir el encabezado', () => {
+    const d = detectTemplate(decorada, 'z.xlsx');
+    const hoja = d.sheets[0];
+    expect(hoja.candidateRows.map((r) => r.row)).toEqual([1, 2, 3, 4, 5]);
+    expect(hoja.candidateRows[0].preview).toContain('CONSULTORA Z');
+  });
+
+  it('vuelve a leer la planilla con la fila que eligió la persona', () => {
+    const d = detectTemplate(decorada, 'z.xlsx', { FORMULARIO: { headerRow: 3 } });
+    const hoja = d.sheets[0];
+    expect(hoja.headerRow).toBe(3);
+    expect(hoja.columns.map((c) => c.header)).toEqual(['Fecha', 'ID Estación', 'Nombre común']);
+    // El preámbulo queda como estaba: el archivo debe salir igual al original.
+    expect(hoja.preamble).toHaveLength(2);
+  });
+
+  it('muestra un ejemplo del dato de cada columna', () => {
+    const d = detectTemplate(decorada, 'z.xlsx', { FORMULARIO: { headerRow: 3 } });
+    const estacion = d.sheets[0].columns.find((c) => c.header === 'ID Estación')!;
+    expect(estacion.samples).toEqual(['EM01', 'EM02']);
+  });
+
+  it('la persona puede forzar el uso de una hoja descartada, y al revés', () => {
+    const base = detectTemplate(consultoraA, 'a.xlsx');
+    expect(base.sheets.find((sh) => sh.name === 'Instrucciones')!.ignored).toBe(true);
+
+    const forzada = detectTemplate(consultoraA, 'a.xlsx', { Instrucciones: { use: true } });
+    expect(forzada.sheets.find((sh) => sh.name === 'Instrucciones')!.ignored).toBe(false);
+
+    const descartada = detectTemplate(consultoraA, 'a.xlsx', { 'FORMULARIO FAUNA': { use: false } });
+    expect(descartada.sheets.find((sh) => sh.name === 'FORMULARIO FAUNA')!.ignored).toBe(true);
+  });
+
+  it('la persona puede corregir qué lleva la hoja', () => {
+    const d = detectTemplate(decorada, 'z.xlsx', { FORMULARIO: { headerRow: 3, scope: 'plan' } });
+    expect(d.sheets[0].scope).toBe('plan');
+  });
+
+  it('avisa qué campos de terreno no tienen dónde escribirse', () => {
+    const d = detectTemplate(decorada, 'z.xlsx', { FORMULARIO: { headerRow: 3 } });
+    const faltan = fieldsWithoutColumn(d).map((f) => f.id);
+    // La planilla sólo tiene fecha, estación y nombre común.
+    expect(faltan).toContain('occurrence.count');
+    expect(faltan).toContain('occurrence.sex');
+    expect(faltan).not.toContain('station.code');
   });
 });

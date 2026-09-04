@@ -7,7 +7,10 @@ import { useRef, useState } from 'react';
 import { db } from '../../db/db';
 import { seedCatalogs } from '../../db/seed';
 import { EXPORT_FIELDS } from '../../export/fields';
-import { toTemplate, detectTemplate, type TemplateDetection } from '../../import/template';
+import {
+  fieldsWithoutColumn, toTemplate, detectTemplate,
+  type SheetOverride, type TemplateDetection,
+} from '../../import/template';
 import { analyzeWorkbook, type ImportPreview } from '../../import/planilla';
 import { readKmlFile, toStationCandidates, type StationCandidate } from '../../geo/kml';
 import { useStore } from '../../state/store';
@@ -37,6 +40,10 @@ export function Ajustes() {
   const [preview, setPreview] = useState<ImportPreview | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const [detection, setDetection] = useState<TemplateDetection | null>(null);
+  // El archivo se conserva en memoria mientras dura la revisión: cambiar la
+  // fila de encabezado obliga a volver a leerlo, no a parchar el resultado.
+  const [templateFile, setTemplateFile] = useState<ArrayBuffer | null>(null);
+  const [overrides, setOverrides] = useState<Record<string, SheetOverride>>({});
   const [kml, setKml] = useState<StationCandidate[] | null>(null);
   const [chosen, setChosen] = useState<Set<string>>(new Set());
   const [prefix, setPrefix] = useState('');
@@ -215,8 +222,10 @@ export function Ajustes() {
             onChange={async (e) => {
               const file = e.target.files?.[0];
               if (!file) return;
-              const found = detectTemplate(await file.arrayBuffer(), file.name);
-              setDetection(found);
+              const buffer = await file.arrayBuffer();
+              setTemplateFile(buffer);
+              setOverrides({});
+              setDetection(detectTemplate(buffer, file.name));
               setTemplateName(file.name.replace(/\.[^.]+$/, ''));
             }} />
         </div>
@@ -226,6 +235,12 @@ export function Ajustes() {
             detection={detection}
             name={templateName} onName={setTemplateName}
             organization={organization} onOrganization={setOrganization}
+            onSheet={(sheetName, patch) => {
+              if (!templateFile) return;
+              const next = { ...overrides, [sheetName]: { ...overrides[sheetName], ...patch } };
+              setOverrides(next);
+              setDetection(detectTemplate(templateFile, detection.fileName, next));
+            }}
             onColumn={(sheetName, index, fieldId) => setDetection({
               ...detection,
               sheets: detection.sheets.map((sh) => (sh.name !== sheetName ? sh : {
@@ -243,8 +258,10 @@ export function Ajustes() {
                 organization: organization || null,
               }));
               setDetection(null);
+              setTemplateFile(null);
+              setOverrides({});
             }}
-            onCancel={() => setDetection(null)}
+            onCancel={() => { setDetection(null); setTemplateFile(null); setOverrides({}); }}
           />
         )}
       </section>
@@ -303,16 +320,18 @@ export function Ajustes() {
 }
 
 /** Revisión del mapeo antes de guardar la plantilla. Nada se asume en silencio. */
-function TemplateReview({ detection, name, onName, organization, onOrganization, onColumn, onSave, onCancel }: {
+function TemplateReview({ detection, name, onName, organization, onOrganization, onColumn, onSheet, onSave, onCancel }: {
   detection: TemplateDetection;
   name: string; onName: (v: string) => void;
   organization: string; onOrganization: (v: string) => void;
   onColumn: (sheet: string, index: number, fieldId: string | null) => void;
+  onSheet: (sheet: string, patch: SheetOverride) => void;
   onSave: () => void; onCancel: () => void;
 }) {
   const usable = detection.sheets.filter((sh) => !sh.ignored);
   const unmapped = usable.reduce((n, sh) => n + sh.columns.filter((c) => !c.fieldId).length, 0);
   const total = usable.reduce((n, sh) => n + sh.columns.length, 0);
+  const sinColumna = fieldsWithoutColumn(detection);
 
   return (
     <div style={{ marginTop: 12 }}>
@@ -339,23 +358,63 @@ function TemplateReview({ detection, name, onName, organization, onOrganization,
         </p>
       )}
 
-      {usable.map((sheet) => (
-        <div key={sheet.name} style={{ marginTop: 12 }}>
-          <h2 style={{ fontSize: 13 }}>{sheet.name} · {sheet.scope} · encabezado en fila {sheet.headerRow}</h2>
-          <div className="matrix">
-            {sheet.columns.map((c) => (
-              <FragmentRow key={c.index} column={c}
-                onChange={(fieldId) => onColumn(sheet.name, c.index, fieldId)} />
-            ))}
-          </div>
-        </div>
-      ))}
-      {detection.sheets.some((sh) => sh.ignored) && (
+      {/* Lo que la app va a recoger en terreno y esta planilla no tiene dónde
+          escribir. No es un error, pero hay que verlo antes de guardar. */}
+      {sinColumna.length > 0 && (
         <p className="muted" style={{ fontSize: 12, marginTop: 10 }}>
-          Se ignoraron: {detection.sheets.filter((sh) => sh.ignored).map((sh) => sh.name).join(', ')}
-          {' '}(instrucciones, listas de validación u hojas sin encabezado reconocible).
+          <b>Sin columna en esta planilla:</b> {sinColumna.map((f) => f.label).join(', ')}.
+          {' '}Se van a registrar igual y quedan en el respaldo, pero no saldrán en este Excel.
         </p>
       )}
+
+      {detection.sheets.map((sheet) => (
+        <div key={sheet.name} style={{ marginTop: 14, opacity: sheet.ignored ? 0.55 : 1 }}>
+          <div className="row" style={{ alignItems: 'baseline', gap: 8 }}>
+            <h2 style={{ fontSize: 13, flex: '1 1 auto', margin: 0 }}>{sheet.name}</h2>
+            <label style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }}>
+              <input type="checkbox" checked={!sheet.ignored}
+                onChange={(e) => onSheet(sheet.name, { use: e.target.checked })} />
+              Usar esta hoja
+            </label>
+          </div>
+
+          {!sheet.ignored && (
+            <div className="grid2" style={{ marginTop: 6 }}>
+              <div className="field">
+                <label>Fila del encabezado</label>
+                {/* La planilla decorada es la norma: logos, cliente y código
+                    arriba. Si la detección falla, se elige a mano. */}
+                <select value={sheet.headerRow ?? ''}
+                  onChange={(e) => onSheet(sheet.name, { headerRow: Number(e.target.value) })}>
+                  {sheet.candidateRows.map((r) => (
+                    <option key={r.row} value={r.row}>Fila {r.row} — {r.preview}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="field">
+                <label>Qué lleva esta hoja</label>
+                <select value={sheet.scope}
+                  onChange={(e) => onSheet(sheet.name, { scope: e.target.value as TemplateDetection['sheets'][number]['scope'] })}>
+                  {SCOPES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                </select>
+              </div>
+            </div>
+          )}
+
+          {sheet.ignored
+            ? <p className="muted" style={{ fontSize: 12, margin: '4px 0 0' }}>
+                No se usa (instrucciones, listas de validación u hoja sin encabezado reconocible).
+              </p>
+            : (
+              <div className="matrix" style={{ marginTop: 6 }}>
+                {sheet.columns.map((c) => (
+                  <FragmentRow key={c.index} column={c}
+                    onChange={(fieldId) => onColumn(sheet.name, c.index, fieldId)} />
+                ))}
+              </div>
+            )}
+        </div>
+      ))}
 
       <div className="row" style={{ marginTop: 12 }}>
         <button className="btn primary" onClick={onSave}>Guardar plantilla</button>
@@ -365,8 +424,19 @@ function TemplateReview({ detection, name, onName, organization, onOrganization,
   );
 }
 
+const SCOPES: Array<[string, string]> = [
+  ['registros', 'Registros de fauna'],
+  ['registros_todos', 'Registros, todos juntos'],
+  ['trampeo', 'Trampeo (Sherman y cámara)'],
+  ['transito_aereo', 'Tránsito aéreo diurno'],
+  ['transito_aereo_nocturno', 'Tránsito aéreo nocturno (MTAN)'],
+  ['muestreos', 'Un muestreo por fila'],
+  ['plan', 'Plan: estación × metodología'],
+  ['estaciones', 'Una estación por fila'],
+];
+
 function FragmentRow({ column, onChange }: {
-  column: { header: string; fieldId: string | null; confidence: number };
+  column: { header: string; fieldId: string | null; confidence: number; samples: string[] };
   onChange: (fieldId: string | null) => void;
 }) {
   return (
@@ -377,6 +447,13 @@ function FragmentRow({ column, onChange }: {
           <span className="chip warn" style={{ marginLeft: 6, fontSize: 11 }}>aprox.</span>
         )}
         {!column.fieldId && <span className="chip error" style={{ marginLeft: 6, fontSize: 11 }}>sin asignar</span>}
+        {/* Ver el dato es lo que permite decidir: "TIPO" no dice nada,
+            "Tipo C · Tipo B2" sí. */}
+        {column.samples.length > 0 && (
+          <span className="muted" style={{ display: 'block', fontSize: 11 }}>
+            {column.samples.join(' · ')}
+          </span>
+        )}
       </span>
       <select value={column.fieldId ?? ''} onChange={(e) => onChange(e.target.value || null)}>
         <option value="">— dejar vacía —</option>

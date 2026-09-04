@@ -88,6 +88,28 @@ tener su formato incorporado.
 El flujo es el de siempre: detectar → validar → mostrar errores → importar sólo
 lo válido. El archivo original nunca se modifica.
 
+## K.5b Cuando la detección se equivoca, manda la persona
+
+El emparejamiento automático es una propuesta, no una decisión. Antes de
+guardar la plantilla, en Ajustes se puede corregir todo:
+
+- **Qué fila es el encabezado.** Se ofrecen las primeras filas con su contenido
+  ("Fila 1 — CONSULTORA Z", "Fila 3 — Fecha · ID Estación · Nombre común"). Al
+  elegir otra, la planilla se vuelve a leer entera desde ahí; no se parcha el
+  resultado, porque el emparejamiento tiene que corresponder a la fila elegida.
+- **Qué hojas se usan.** Una hoja descartada se puede forzar, y una detectada
+  se puede excluir.
+- **Qué lleva cada hoja** (registros, trampeo, MTAN, plan, muestreos,
+  estaciones), por si el alcance deducido no es el correcto.
+- **Qué campo alimenta cada columna**, con **un ejemplo del dato real al lado
+  del encabezado**. Es lo que permite decidir: «TIPO» no dice nada; «Tipo C ·
+  Tipo B2» deja claro que es el tipo de estación y no el filo.
+
+Y antes de guardar se avisa **qué campos de terreno no tienen columna** en esa
+planilla. No es un error —cada consultora pide lo suyo— pero conviene saber que
+esos datos se van a registrar y no van a salir en ese Excel. Quedan igual en el
+respaldo y en la exportación Darwin Core.
+
 ## K.6b Lo que se aprendió leyendo planillas ajenas de verdad
 
 Probado contra dos formularios reales de consultoras distintas (un formulario
