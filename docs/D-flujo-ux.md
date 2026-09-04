@@ -148,7 +148,12 @@ de exportación.
 `¿Qué me falta?`, `Nuevo registro`, `Cambiar estación a EMF10`, `Guardar`,
 `Duplicar`, `Revisar pendientes`, `Resumen`, `Sincronizar`, `Agregar foto`,
 `Agregar otro individuo`, `Editar abundancia N`, `Sin detecciones`,
-`Iniciar track`, `Punto 100`, `Marcar punto medio`, `Cerrar track`.
+`Iniciar track`, `Punto 100`, `Marcar punto medio`, `Cerrar track`,
+`Otro igual`, `Otros 3 iguales`, `Deshacer`, `Corrige, eran dos`.
+
+**Todo lo que se puede decir se puede tocar.** En terreno a veces no se puede
+hablar —viento, ruido, ir acompañado— o el micrófono simplemente no engancha:
+deshacer, repetir y marcar puntos tienen su botón en pantalla.
 
 Se interpretan **antes** que una observación, y sólo si la frase **es** el comando
 completo: «cambiar estación a EMF10 y un chucao» se trata como dictado, para no

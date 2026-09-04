@@ -45,7 +45,16 @@ export function App() {
         </Suspense>
       </main>
 
-      {s.banner && <div className="banner" data-tone={s.banner.tone} role="status">{s.banner.text}</div>}
+      {s.banner && (
+        <div className="banner" data-tone={s.banner.tone} role="status">
+          {s.banner.text}
+          {/* Deshacer donde uno mira después de guardar, no tres pantallas más allá. */}
+          {s.lastSaved && Date.now() - s.lastSaved.at < 20000 && s.banner.tone === 'ok' && (
+            <button className="btn ghost" style={{ minHeight: 36, padding: '4px 12px', marginLeft: 10 }}
+              onClick={() => void s.undoLastSave()}>Deshacer</button>
+          )}
+        </div>
+      )}
 
       <nav className="tabs">
         {TABS.map((t) => (

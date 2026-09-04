@@ -71,6 +71,8 @@ interface State {
 
   records: RecordRow[];
   sync: SyncStatus;
+  /** Último lote guardado: lo que "deshacer" y "otro igual" toman como referencia. */
+  lastSaved: { batchId: string; occurrenceIds: string[]; at: number } | null;
   /** Muestreo abierto: el que acumula esfuerzo mientras se camina. */
   activeEvent: SamplingEvent | null;
   effort: EffortSummary | null;
@@ -98,6 +100,12 @@ interface State {
   removeRecord(id: string): Promise<void>;
   duplicateRecord(id: string): Promise<void>;
   reviewRecord(id: string, state: ReviewState): Promise<void>;
+  /** Deshace el último guardado completo, mientras siga siendo reciente. */
+  undoLastSave(): Promise<void>;
+  /** Repite el último registro con la hora de ahora ("otro igual"). */
+  repeatLast(times?: number): Promise<void>;
+  /** Aplica una corrección hablada al último registro ("no, eran dos"). */
+  correctLast(text: string): Promise<void>;
   runSync(transport: SyncTransport): Promise<void>;
 
   /** Cierra el muestreo abierto y congela su esfuerzo. */
@@ -118,6 +126,12 @@ interface State {
 }
 
 const DEVICE_KEY = 'proterr.deviceId';
+
+/** Etiquetas legibles para confirmar en voz alta qué se corrigió. */
+const LABEL: Record<string, string> = {
+  individualCount: 'abundancia', sex: 'sexo', lifeStage: 'edad',
+  behaviour: 'conducta', recordType: 'tipo de registro', organismCondition: 'estado',
+};
 
 function deviceId(): string {
   const stored = globalThis.localStorage?.getItem(DEVICE_KEY);
@@ -173,6 +187,7 @@ export const useStore = create<State>((set, get) => ({
   drafts: [], validations: {}, lastUtterance: null,
   records: [], sync: { pending: 0, errored: 0, conflicts: 0 },
   activeEvent: null, effort: null, trackWatchId: null, quality: null,
+  lastSaved: null,
 
   async init() {
     if (!(await catalogsReady())) await seedCatalogs();
@@ -338,11 +353,12 @@ export const useStore = create<State>((set, get) => ({
     // Un solo lote para todo lo dictado junto: son observaciones distintas que
     // el usuario enumeró, no un guardado repetido.
     const batchId = uuid();
+    const savedIds: string[] = [];
     let saved = 0;
     for (const draft of drafts) {
       const v = validations[draft.draftId];
       if (v && !v.canSave) continue;
-      await commitDraft(
+      const result = await commitDraft(
         draft,
         {
           projectCode: project.code,
@@ -353,9 +369,13 @@ export const useStore = create<State>((set, get) => ({
         },
         session,
       );
+      savedIds.push(result.occurrence.id);
       saved++;
     }
-    set({ drafts: [], validations: {}, screen: 'terreno' });
+    set({
+      drafts: [], validations: {}, screen: 'terreno',
+      lastSaved: savedIds.length ? { batchId, occurrenceIds: savedIds, at: Date.now() } : get().lastSaved,
+    });
     await get().refreshRecords();
     await refreshActiveEvent(set, get);
     set({ sync: await syncStatus() });
@@ -442,6 +462,66 @@ export const useStore = create<State>((set, get) => ({
     const waypoint = await markWaypoint(event.id, label, fix, get().session);
     await refreshActiveEvent(set, get);
     get().notify(`Punto "${waypoint?.label ?? label}" marcado.`);
+  },
+
+  async undoLastSave() {
+    const last = get().lastSaved;
+    if (!last) { get().notify('No hay nada reciente que deshacer.', 'warn'); return; }
+    for (const id of last.occurrenceIds) {
+      await deleteOccurrence(id, get().session, 'Deshecho por el usuario');
+    }
+    set({ lastSaved: null });
+    await get().refreshRecords();
+    set({ sync: await syncStatus() });
+    get().notify(
+      last.occurrenceIds.length === 1
+        ? 'Registro deshecho. Queda en la auditoría.'
+        : `${last.occurrenceIds.length} registros deshechos. Quedan en la auditoría.`,
+      'warn',
+    );
+  },
+
+  async repeatLast(times = 1) {
+    const source = get().records[0];
+    if (!source) { get().notify('Todavía no hay ningún registro que repetir.', 'warn'); return; }
+    const ids: string[] = [];
+    for (let i = 0; i < Math.max(1, times); i++) {
+      const copy = await duplicateOccurrence(source.occurrence.id, get().session);
+      ids.push(copy.id);
+    }
+    set({ lastSaved: { batchId: uuid(), occurrenceIds: ids, at: Date.now() } });
+    await get().refreshRecords();
+    set({ sync: await syncStatus() });
+    const nombre = source.taxon?.commonName ?? 'registro';
+    get().notify(times > 1 ? `${times} ${nombre} más.` : `Otro ${nombre.toLowerCase()}.`);
+  },
+
+  async correctLast(text) {
+    const target = get().records[0];
+    const { taxonIndex } = get();
+    if (!target || !taxonIndex) { get().notify('No hay un registro que corregir.', 'warn'); return; }
+
+    // Se reinterpreta la corrección con el mismo parser, apoyada en la especie
+    // ya registrada: así "eran dos" o "era hembra" se entienden sin repetirla.
+    const nombre = target.taxon?.commonName ?? '';
+    const parsed = parseUtterance(`${nombre} ${text}`, { taxonIndex });
+    const obs = parsed.observations[0];
+    if (!obs) { get().notify(`No entendí la corrección: "${text}"`, 'warn'); return; }
+
+    const patch: Partial<Occurrence> = {};
+    if (obs.individualCount !== null && !obs.countInferred) patch.individualCount = obs.individualCount;
+    if (obs.sex) patch.sex = obs.sex;
+    if (obs.lifeStage) patch.lifeStage = obs.lifeStage;
+    if (obs.behaviour) patch.behaviour = obs.behaviour;
+    if (!obs.recordTypeInferred && obs.recordType) patch.recordType = obs.recordType;
+    if (obs.organismCondition) patch.organismCondition = obs.organismCondition;
+
+    if (!Object.keys(patch).length) { get().notify(`No entendí qué corregir en "${text}"`, 'warn'); return; }
+    await updateOccurrence(target.occurrence.id, patch, get().session, `Corrección hablada: "${text}"`);
+    await get().refreshRecords();
+    set({ sync: await syncStatus() });
+    const resumen = Object.entries(patch).map(([k, v]) => `${LABEL[k] ?? k}: ${String(v)}`).join(', ');
+    get().notify(`Corregido — ${resumen}.`);
   },
 
   async closeEffort(extra = {}) {
@@ -612,6 +692,9 @@ function revalidate(set: (partial: Partial<State>) => void, get: () => State): v
       resolveTaxon: (id) => taxonIndex?.get(id),
       effort: get().effort,
       conditions: get().activeEvent?.conditions ?? null,
+      fix: get().fix,
+      station: get().stations.find((st) => st.id === d.stationId) ?? null,
+      nearbyStations: get().stations.filter((st) => st.projectId === projectId),
     });
   }
   set({ validations });

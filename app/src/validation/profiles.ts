@@ -99,8 +99,9 @@ export const DEFAULT_PROFILE: RequirementProfile = {
     },
     camara_trampa: {
       taxon: 'required', eventDate: 'required', eventTime: 'required',
-      individualCount: 'required', behaviour: 'recommended', photos: 'required',
-      recordType: 'recommended',
+      individualCount: 'required', photos: 'required', recordType: 'recommended',
+      // La foto permite describir conducta y edad, igual que un avistamiento.
+      behaviour: 'recommended', lifeStage: 'recommended',
     },
     trampa_sherman: {
       taxon: 'required', individualCount: 'required', sex: 'recommended',
@@ -124,8 +125,23 @@ export const DEFAULT_PROFILE: RequirementProfile = {
       occurrenceCoordinates: 'required', photos: 'recommended',
     },
   },
+  /**
+   * El tipo de registro dice por qué canal se detectó al animal, y eso decide
+   * qué se puede saber de él. Si sólo lo oíste, no puedes decir si era juvenil
+   * ni qué estaba haciendo aparte de cantar: pedirlo es inventar o molestar.
+   */
   overridesByRecordType: {
-    // "Fecas de puma" no lleva abundancia ni sexo: pedirlo sería ruido.
+    // --- Visto: se puede describir lo que hacía y qué edad aparentaba ---
+    Individuo: { behaviour: 'recommended', lifeStage: 'recommended', sex: 'optional' },
+
+    // --- Sólo oído: la vocalización ES la conducta; el resto no se ve ---
+    Vocalización: { behaviour: 'hidden', lifeStage: 'hidden', sex: 'hidden' },
+    'Registro de audio': {
+      behaviour: 'hidden', lifeStage: 'hidden', sex: 'hidden',
+      individualCount: 'recommended',
+    },
+
+    // --- Evidencia indirecta: no hay animal que observar, sólo su rastro ---
     Fecas: { individualCount: 'optional', sex: 'hidden', lifeStage: 'hidden', behaviour: 'hidden' },
     Huella: { individualCount: 'optional', sex: 'hidden', lifeStage: 'hidden', behaviour: 'hidden' },
     Plumas: { individualCount: 'optional', sex: 'optional', lifeStage: 'hidden', behaviour: 'hidden' },
@@ -133,9 +149,8 @@ export const DEFAULT_PROFILE: RequirementProfile = {
     Cururera: { individualCount: 'optional', sex: 'hidden', lifeStage: 'hidden', behaviour: 'hidden' },
     Huesos: { individualCount: 'optional', sex: 'hidden', lifeStage: 'hidden', behaviour: 'hidden' },
     Muda: { individualCount: 'optional', sex: 'hidden', lifeStage: 'hidden', behaviour: 'hidden' },
-    Nido: { individualCount: 'optional', sex: 'hidden', behaviour: 'hidden' },
+    Nido: { individualCount: 'optional', sex: 'hidden', lifeStage: 'hidden', behaviour: 'hidden' },
     Egagrópila: { individualCount: 'optional', sex: 'hidden', lifeStage: 'hidden', behaviour: 'hidden' },
-    'Registro de audio': { individualCount: 'recommended', sex: 'hidden', behaviour: 'optional' },
   },
 };
 

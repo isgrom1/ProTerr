@@ -22,6 +22,14 @@ describe('comandos de voz', () => {
     ['pto final', { kind: 'marcar_punto', label: 'final' }],
     ['punto de inicio', { kind: 'marcar_punto', label: 'inicio' }],
     ['Sin detecciones', { kind: 'sin_detecciones' }],
+    ['Otro igual', { kind: 'otro_igual', veces: 1 }],
+    ['otra más', { kind: 'otro_igual', veces: 1 }],
+    ['otros 3 iguales', { kind: 'otro_igual', veces: 3 }],
+    ['Repetir', { kind: 'otro_igual', veces: 1 }],
+    ['Deshacer', { kind: 'deshacer' }],
+    ['me equivoqué', { kind: 'deshacer' }],
+    ['corrige, eran dos', { kind: 'corregir', texto: 'eran dos' }],
+    ['no, era hembra', { kind: 'corregir', texto: 'era hembra' }],
   ];
   for (const [text, expected] of cases) {
     it(`"${text}"`, () => expect(parseCommand(text)).toEqual(expected));

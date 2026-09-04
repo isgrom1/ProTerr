@@ -85,6 +85,13 @@ regla vive en `conservation/mobility.ts` y depende de tres cosas:
 El mismo criterio decide cuándo sugerir fotografía. El aviso siempre dice la
 razón, para que el usuario entienda por qué se le pide justo esta vez.
 
+## H.4c El canal de detección decide qué se pregunta
+
+Lo que sólo se sabe viendo al animal no se pide cuando sólo se oyó. Un
+avistamiento y una foto de cámara trampa admiten conducta y edad; una
+vocalización, una grabación o unas fecas, no. Ver
+[J.11](J-aristas-adicionales.md).
+
 ## H.5 Lo que nunca se pide
 
 Reino, filo, clase, orden, familia, género, epíteto, origen, distribución,

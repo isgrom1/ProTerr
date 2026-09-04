@@ -70,7 +70,10 @@ export const BEHAVIOUR_LEXICON: Array<LexEntry<string>> = [
   { phrases: ['tomando agua', 'bebiendo'], value: 'Tomando agua' },
   { phrases: ['volando', 'en vuelo', 'sobrevolando', 'planeando'], value: 'Volando' },
   { phrases: ['cazando', 'depredando'], value: 'Cazando' },
-  { phrases: ['vocalizando', 'cantando'], value: 'Vocalizando' },
+  // "vocalización" (sustantivo) describe el mismo hecho que "cantando":
+  // sin esto, decir "chucao cantando" llenaba la conducta y decir
+  // "chucao, vocalización" la dejaba vacía, para el mismo registro.
+  { phrases: ['vocalizando', 'cantando', 'vocalizacion', 'canto', 'cantos', 'escuchado', 'escuchada'], value: 'Vocalizando' },
   { phrases: ['escondido', 'escondida', 'oculto', 'refugiado'], value: 'Escondido' },
   { phrases: ['reposando', 'descansando'], value: 'Reposando' },
   { phrases: ['agrupacion', 'en grupo', 'bandada'], value: 'Agrupación' },

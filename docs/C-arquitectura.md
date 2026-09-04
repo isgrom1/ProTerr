@@ -56,6 +56,7 @@
 | NLP | `app/src/nlp/` | Segmentación, léxico, números en español, comandos |
 | Validación | `app/src/validation/` | Perfiles configurables + motor de recordatorios |
 | Voz | `app/src/speech/` | Reconocedor del dispositivo, retroalimentación sonora |
+| Fotografías | `app/src/media/` | Lector de EXIF propio, compresión, orientación |
 | Geo | `app/src/geo/` | UTM ↔ WGS84, sugerencia de estación por cercanía |
 | Esfuerzo | `app/src/effort/` | Track explícito, waypoints, abundancia relativa (opt-in) |
 | Conservación | `app/src/conservation/` | Categorías RCE/UICN, endemismo, movilidad, especies sensibles |

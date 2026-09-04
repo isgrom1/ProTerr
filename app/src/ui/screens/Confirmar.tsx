@@ -7,6 +7,8 @@
  */
 import { useState } from 'react';
 import { flagFor } from '../../conservation/status';
+import { toUtm } from '../../geo/utm';
+import { preparePhoto, suggestionFrom, type PhotoSuggestion } from '../../media/photo';
 import { attachMedia } from '../../db/repository';
 import type { ObservationDraft } from '../../domain/draft';
 import { useStore } from '../../state/store';
@@ -241,10 +243,21 @@ function Select({ value, options, onChange }: { value: string; options: string[]
   );
 }
 
-/** Fotografía asociada al registro, con timestamp y coordenadas (§15). */
+/**
+ * Fotografía asociada al registro.
+ *
+ * La foto no es sólo evidencia: trae en su EXIF la coordenada, la hora real y,
+ * si la cámara lo permite, el código de estación. Todo eso se PROPONE al
+ * usuario; nada se aplica solo.
+ */
 function PhotoButton({ draftId }: { draftId: string }) {
   const s = useStore();
   const draft = s.drafts.find((d) => d.draftId === draftId)!;
+  const [suggestions, setSuggestions] = useState<PhotoSuggestion[]>([]);
+  const [saved, setSaved] = useState<{ from: number; to: number } | null>(null);
+
+  const stationCodes = s.stations.filter((st) => st.projectId === s.projectId).map((st) => st.stationCode);
+
   return (
     <div className="field">
       <label htmlFor={`ph-${draftId}`}>Fotografías ({draft.mediaIds.length})</label>
@@ -253,19 +266,84 @@ function PhotoButton({ draftId }: { draftId: string }) {
         onChange={async (e) => {
           const files = [...(e.target.files ?? [])];
           const ids: string[] = [];
+          const found: PhotoSuggestion[] = [];
+          let from = 0;
+          let to = 0;
+
           for (const file of files) {
+            const prepared = await preparePhoto(file);
+            from += prepared.originalBytes;
+            to += prepared.bytes;
             const media = await attachMedia({
-              occurrenceId: null, eventId: null, kind: 'foto', mimeType: file.type || 'image/jpeg',
-              blob: file, capturedAt: new Date(file.lastModified || Date.now()).toISOString(),
-              fix: s.fix, headingDegrees: null, exif: null, fileName: file.name,
+              occurrenceId: null, eventId: null, kind: 'foto',
+              mimeType: prepared.blob.type || 'image/jpeg', blob: prepared.blob,
+              capturedAt: prepared.metadata.takenAt ?? new Date().toISOString(),
+              // La posición de la foto manda sobre la del dispositivo: es la
+              // del momento exacto del avistamiento.
+              fix: prepared.fix ?? s.fix,
+              headingDegrees: prepared.metadata.headingDegrees,
+              exif: prepared.metadata as unknown as Record<string, unknown>,
+              fileName: file.name,
             }, s.session);
             ids.push(media.id);
+            found.push(suggestionFrom(prepared, stationCodes));
           }
+
           s.patchDraft(draftId, { mediaIds: [...draft.mediaIds, ...ids] });
+          setSaved({ from, to });
+          setSuggestions(found.filter((f) => f.fix || f.stationCode || f.time));
         }}
       />
+
+      {saved && saved.from > saved.to && (
+        <span className="muted" style={{ fontSize: 12 }}>
+          Comprimida de {mb(saved.from)} a {mb(saved.to)} para que quepa en el respaldo.
+        </span>
+      )}
+
+      {suggestions.map((sug, i) => (
+        <div className="issue" data-severity="question" key={i}>
+          <p>La foto trae datos propios. ¿Los usamos?</p>
+          <ul className="list" style={{ marginBottom: 8 }}>
+            {sug.stationCode && <li><span className="meta">Estación</span><span className="name">{sug.stationCode}</span></li>}
+            {sug.time && <li><span className="meta">Hora</span><span className="name">{sug.date} {sug.time}</span></li>}
+            {sug.fix && (
+              <li>
+                <span className="meta">Coordenada</span>
+                <span className="name">
+                  {utmLabel(sug.fix, s.projects.find((p) => p.id === s.projectId)?.utmZone)}
+                  {sug.fix.accuracyMeters != null ? ` ±${Math.round(sug.fix.accuracyMeters)} m` : ''}
+                </span>
+              </li>
+            )}
+          </ul>
+          <div className="row">
+            <button className="btn primary" onClick={() => {
+              const station = s.stations.find((st) => st.stationCode === sug.stationCode);
+              s.patchDraft(draftId, {
+                ...(station ? { stationId: station.id } : {}),
+                ...(sug.date ? { eventDate: sug.date } : {}),
+                ...(sug.time ? { eventTime: sug.time } : {}),
+                ...(sug.fix ? { occurrenceFixRequested: true } : {}),
+              });
+              setSuggestions((prev) => prev.filter((_, k) => k !== i));
+            }}>Usar los datos de la foto</button>
+            <button className="btn ghost" onClick={() => setSuggestions((prev) => prev.filter((_, k) => k !== i))}>
+              Dejar como está
+            </button>
+          </div>
+        </div>
+      ))}
     </div>
   );
+}
+
+const mb = (bytes: number): string =>
+  bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1)} MB` : `${Math.round(bytes / 1024)} kB`;
+
+function utmLabel(fix: { latitude: number; longitude: number }, zone?: number): string {
+  const utm = toUtm(fix.latitude, fix.longitude, zone);
+  return `UTM ${utm.zone}${utm.hemisphere} ${Math.round(utm.east)} / ${Math.round(utm.north)}`;
 }
 
 function recordGlyph(recordType: string | null): string {

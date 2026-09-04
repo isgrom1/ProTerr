@@ -57,7 +57,7 @@ Cada organización carga sus propios catálogos y su propio formulario. Ver
 ```bash
 cd app
 npm install
-npm test        # 192 pruebas
+npm test        # 221 pruebas
 npm run dev     # http://localhost:5173
 npm run build   # PWA instalable en dist/
 ```
@@ -104,6 +104,12 @@ app/src/
 - **No adivina.** Los 47 nombres comunes ambiguos del catálogo se preguntan en
   vez de resolverse con el primero de la lista, que es lo que hacía el
   `INDEX/MATCH` de la planilla.
+- **No pregunta lo que no se puede saber.** Si sólo lo oíste, no te pide qué
+  hacía ni si era juvenil. Si te alejaste de la estación seleccionada, te avisa
+  antes de guardar.
+- **La foto llena el registro.** Del EXIF salen coordenada (en UTM), hora real,
+  rumbo y hasta el código de estación si lo escribiste en la cámara. Se propone;
+  tú confirmas.
 - **No pide lo que puede derivar.** Proyecto, región, ambiente, coordenadas de
   estación y la taxonomía completa salen del catálogo, no del usuario.
 - **La planilla es una salida, no la estructura.** Excel, CSV y Darwin Core

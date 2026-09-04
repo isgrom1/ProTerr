@@ -57,7 +57,8 @@ describe('no bloquear al usuario (brief §7)', () => {
 
 describe('recordatorios sin ruido', () => {
   it('separa lo que pertenece al muestreo de lo que pertenece a la observación', () => {
-    const d = draftOf({ taxonId: byName('Chucao').id, recordType: 'Vocalización', individualCount: 1, weather: null, behaviour: null });
+    // Individuo, no vocalización: la conducta sólo se pide cuando se vio al animal.
+    const d = draftOf({ taxonId: byName('Chucao').id, recordType: 'Individuo', individualCount: 1, weather: null, behaviour: null });
     const r = validateDraft(d, { profile: DEFAULT_PROFILE, taxon: byName('Chucao'), resolveTaxon });
     // El clima es del evento: se pregunta una vez, no por cada especie dictada.
     expect(r.issues.find((i) => i.field === 'weather')?.level).toBe('event');
@@ -256,5 +257,80 @@ describe('desambiguación de nombre genérico', () => {
     expect(whatIsMissing(r).some((m) => m.includes('Falta especie'))).toBe(false);
     expect(r.canSave).toBe(true);              // se puede guardar y resolver después
     expect(r.pendingFields).toContain('taxon'); // pero queda pendiente
+  });
+});
+
+describe('coherencia con el GPS: ¿seguimos en esta estación?', () => {
+  const station = (id: string, code: string, lat: number, lon: number) => ({
+    id, projectId: 'p', stationCode: code, finalStationCode: code,
+    darwinCoreLocationId: `urn:x:${code}`, latitude: lat, longitude: lon,
+    methods: ['transecto'], sites: [],
+  } as never);
+  const a = station('sa', 'EMF01', -32.9600, -71.3500);
+  const b = station('sb', 'EMF02', -32.9640, -71.3500); // ~445 m al sur
+  const fix = (lat: number, lon: number, acc = 8) =>
+    ({ latitude: lat, longitude: lon, accuracyMeters: acc, fixedAt: '2026-09-04T14:00:00Z' } as never);
+
+  const base = { profile: DEFAULT_PROFILE, taxon: byName('Chucao'), resolveTaxon, nearbyStations: [a, b] };
+  const d = draftOf({ taxonId: byName('Chucao').id, recordType: 'Vocalización', individualCount: 1, stationId: 'sa' });
+
+  it('no dice nada si estás donde dice la pantalla', () => {
+    const r = validateDraft(d, { ...base, station: a, fix: fix(-32.9601, -71.3500) });
+    expect(r.issues.some((i) => i.field === 'stationDistance')).toBe(false);
+  });
+
+  it('avisa y ofrece la más cercana si te alejaste', () => {
+    const r = validateDraft(d, { ...base, station: a, fix: fix(-32.9639, -71.3500) });
+    const issue = r.issues.find((i) => i.field === 'stationDistance')!;
+    expect(issue.severity).toBe('question');
+    expect(issue.level).toBe('event');
+    expect(issue.message).toContain('EMF01');
+    expect(issue.message).toContain('La más cercana es EMF02');
+    expect(issue.options?.map((o) => o.label)).toEqual([
+      expect.stringContaining('Cambiar a EMF02'),
+      'Sigo en EMF01',
+    ]);
+  });
+
+  it('nunca cambia la estación por su cuenta: sólo ofrece', () => {
+    const r = validateDraft(d, { ...base, station: a, fix: fix(-32.9639, -71.3500) });
+    const cambiar = r.issues.find((i) => i.field === 'stationDistance')!.options![0];
+    expect(cambiar.patch).toEqual({ stationId: 'sb' });
+    expect(r.canSave).toBe(true); // avisar no bloquea
+  });
+
+  it('calla si el GPS es peor que la distancia: sería ruido, no un error del usuario', () => {
+    const r = validateDraft(d, { ...base, station: a, fix: fix(-32.9639, -71.3500, 900) });
+    expect(r.issues.some((i) => i.field === 'stationDistance')).toBe(false);
+  });
+
+  it('sin GPS no inventa un aviso', () => {
+    const r = validateDraft(d, { ...base, station: a, fix: null });
+    expect(r.issues.some((i) => i.field === 'stationDistance')).toBe(false);
+  });
+});
+
+describe('campos según el canal de detección', () => {
+  it('un avistamiento pide conducta y edad', () => {
+    expect(requirementFor(DEFAULT_PROFILE, 'behaviour', { recordType: 'Individuo' })).toBe('recommended');
+    expect(requirementFor(DEFAULT_PROFILE, 'lifeStage', { recordType: 'Individuo' })).toBe('recommended');
+  });
+
+  it('una vocalización no: no se ve al animal', () => {
+    for (const field of ['behaviour', 'lifeStage', 'sex'] as const) {
+      expect(requirementFor(DEFAULT_PROFILE, field, { recordType: 'Vocalización' })).toBe('hidden');
+    }
+  });
+
+  it('una cámara trampa sí, porque hay foto', () => {
+    expect(requirementFor(DEFAULT_PROFILE, 'behaviour', { method: 'camara_trampa', recordType: 'Individuo' })).toBe('recommended');
+    expect(requirementFor(DEFAULT_PROFILE, 'lifeStage', { method: 'camara_trampa', recordType: 'Individuo' })).toBe('recommended');
+  });
+
+  it('"chucao, vocalización" ya no reclama comportamiento', () => {
+    const d = draftOf({ taxonId: byName('Chucao').id, recordType: 'Vocalización', individualCount: 1, behaviour: null });
+    const r = validateDraft(d, { profile: DEFAULT_PROFILE, taxon: byName('Chucao'), resolveTaxon });
+    expect(r.issues.some((i) => i.field === 'behaviour')).toBe(false);
+    expect(r.issues.some((i) => i.field === 'lifeStage')).toBe(false);
   });
 });

@@ -23,7 +23,11 @@ export type VoiceCommand =
   | { kind: 'iniciar_track' }
   | { kind: 'cerrar_track' }
   | { kind: 'marcar_punto'; label: string }
-  | { kind: 'sin_detecciones' };
+  | { kind: 'sin_detecciones' }
+  /** Ritmo de terreno: repetir, deshacer y corregir sin abrir nada. */
+  | { kind: 'otro_igual'; veces: number }
+  | { kind: 'deshacer' }
+  | { kind: 'corregir'; texto: string };
 
 interface Rule {
   test: RegExp;
@@ -36,7 +40,7 @@ const RULES: Rule[] = [
   { test: /^(guardar|guarda|listo|ok guardar|confirmar)$/, build: () => ({ kind: 'guardar' }) },
   { test: /^(cancelar|descartar|borrar esto|olvidalo)$/, build: () => ({ kind: 'cancelar' }) },
   { test: /^(eliminar|eliminar registro|borrar registro)$/, build: () => ({ kind: 'eliminar' }) },
-  { test: /^(duplicar|duplicar registro|repetir registro|otro igual)$/, build: () => ({ kind: 'duplicar' }) },
+  { test: /^(duplicar|duplicar registro|duplicar este)$/, build: () => ({ kind: 'duplicar' }) },
   { test: /^(agregar foto|agrega foto|tomar foto|tomar fotografia|agregar fotografia)$/, build: () => ({ kind: 'agregar_foto' }) },
   { test: /^(revisar pendientes|ver pendientes|pendientes)$/, build: () => ({ kind: 'revisar_pendientes' }) },
   { test: /^(resumen|resumen del dia|resumen de terreno|resumen de la jornada)$/, build: () => ({ kind: 'resumen' }) },
@@ -69,6 +73,20 @@ const RULES: Rule[] = [
   {
     test: /^(sin registros?|sin detecciones?|nada que registrar|estacion vacia)$/,
     build: () => ({ kind: 'sin_detecciones' }),
+  },
+  {
+    // Ver cinco chercanes seguidos es normal: repetir el último sin volver a dictarlo.
+    test: /^(?:otro|otra|uno|una) (?:igual|mas|m[aá]s)$|^repetir(?: el ultimo| ultimo)?$|^(?:otros|otras) (\d+) (?:iguales|mas)$/,
+    build: (m) => ({ kind: 'otro_igual', veces: m[1] ? Number(m[1]) : 1 }),
+  },
+  {
+    test: /^(deshacer|deshaz|borra(?: e)?l? ultimo|anular|me equivoque)$/,
+    build: () => ({ kind: 'deshacer' }),
+  },
+  {
+    // "corrige, eran dos" · "no, era hembra" · "corregir abundancia 3"
+    test: /^(?:corrige|corregir|correccion|no,?)\s+(.+)$/,
+    build: (m) => ({ kind: 'corregir', texto: m[1] }),
   },
   {
     test: /^(?:cambiar |usar )?metodologia (?:a |por )?(.+)$/,

@@ -47,6 +47,9 @@ export function Terreno() {
       case 'que_me_falta':
         s.notify(s.drafts.length ? s.missingFor(s.drafts[0].draftId).join(' · ') || 'No falta nada.' : 'No hay un registro en curso.', 'warn');
         break;
+      case 'otro_igual': void s.repeatLast(Number(command.veces) || 1); break;
+      case 'deshacer': void s.undoLastSave(); break;
+      case 'corregir': void s.correctLast(String(command.texto)); break;
       case 'iniciar_track': void s.beginTrack(); break;
       case 'cerrar_track': void s.finishTrack(); break;
       case 'marcar_punto': void s.addWaypoint(String(command.label)); break;
@@ -167,6 +170,18 @@ export function Terreno() {
         />
         <button className="btn" style={{ flex: '0 0 auto' }} onClick={() => void submit(typed)}>Interpretar</button>
       </div>
+      {/* Todo lo que se puede decir se puede tocar: en terreno a veces no se
+          puede hablar (viento, ruido, compañía) o el micrófono no engancha. */}
+      {s.records.length > 0 && (
+        <div className="row" style={{ marginTop: 8 }}>
+          <button className="btn" onClick={() => void s.repeatLast()}>
+            ↺ Otro {(s.records[0].taxon?.commonName ?? 'igual').toLowerCase()}
+          </button>
+          {s.lastSaved && (
+            <button className="btn ghost" onClick={() => void s.undoLastSave()}>Deshacer</button>
+          )}
+        </div>
+      )}
       <div className="row" style={{ marginTop: 8 }}>
         <button className="btn ghost" onClick={() => s.startManualDraft()}>Registro manual</button>
         <button className="btn ghost" onClick={() => void s.requestGps()}>Actualizar GPS</button>

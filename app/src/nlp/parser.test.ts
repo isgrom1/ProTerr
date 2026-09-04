@@ -287,3 +287,12 @@ describe('nombres genéricos de terreno', () => {
     expect(o.taxonNeedsDisambiguation).toBe(false);
   });
 });
+
+describe('la vocalización llena la conducta, se diga como se diga', () => {
+  it('"cantando" y "vocalización" dan el mismo registro', () => {
+    for (const texto of ['un chucao cantando', 'un chucao, vocalización', 'un chucao escuchado']) {
+      const [o] = parse(texto).observations;
+      expect([texto, o.recordType, o.behaviour]).toEqual([texto, 'Vocalización', 'Vocalizando']);
+    }
+  });
+});

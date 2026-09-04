@@ -238,6 +238,92 @@ donde de verdad hacía falta.
 - **Prefijos libres de estación.** `EMF09`, `PMF44`, `TR-1`, `EP 3`: el patrón
   es letras + dígitos, con o sin separador.
 
+## J.11 Campos según el canal de detección
+
+**El problema.** Se pedía comportamiento en una vocalización igual que en un
+avistamiento. Si sólo lo oíste, no puedes decir qué hacía aparte de cantar ni si
+era juvenil: pedirlo obliga a inventar o a ignorar el aviso.
+
+**Lo implementado.** El tipo de registro dice por qué canal se detectó al
+animal, y eso decide qué se puede saber de él:
+
+| Tipo de registro | Conducta | Edad | Sexo |
+|---|---|---|---|
+| Individuo (visto) | recomendada | recomendada | opcional |
+| Cámara trampa | recomendada | recomendada | opcional |
+| Vocalización, audio | **oculta** | **oculta** | oculta |
+| Evidencia indirecta | oculta | oculta | oculta |
+
+Además, «vocalización» ahora llena la conducta igual que «cantando»: antes el
+mismo hecho quedaba distinto según cómo se dijera.
+
+## J.12 «¿Seguimos en esta estación?»
+
+**El problema.** El error más caro de terreno: caminar a la siguiente estación y
+seguir dictando con la anterior seleccionada. Una jornada mal asignada no se
+recupera en gabinete.
+
+**Lo implementado.** Si el GPS te sitúa a más de 200 m de la estación
+seleccionada, la tarjeta de confirmación lo dice **antes de guardar** y ofrece
+la más cercana:
+
+```
+┃ Estás a 445 m de EMF01. La más cercana es EMF02.
+┃ [Cambiar a EMF02 (12 m)]  [Sigo en EMF01]
+```
+
+Nunca cambia solo, y calla cuando la precisión del GPS es peor que la distancia:
+eso sería ruido del receptor, no un error del usuario.
+
+## J.13 Deshacer, repetir y corregir
+
+Tres cosas del ritmo de terreno, cada una con comando de voz **y** botón,
+porque a veces no se puede hablar (viento, ruido, compañía) o el micrófono no
+engancha:
+
+| Acción | Voz | Toque |
+|---|---|---|
+| Deshacer el último guardado | «deshacer», «me equivoqué» | botón en el mismo aviso de guardado |
+| Repetir el último registro | «otro igual», «otros 3 iguales» | «↺ Otro chucao» en la pantalla de terreno |
+| Corregir el último | «corrige, eran dos», «no, era hembra» | abrir el registro |
+
+La corrección hablada se reinterpreta con el mismo parser, apoyada en la especie
+ya registrada, y confirma qué cambió: *«Corregido — abundancia: 3»*.
+Deshacer usa borrado lógico: el registro queda en la auditoría.
+
+## J.14 La fotografía llena el registro
+
+**El hallazgo.** Las fotos de terreno tomadas con una app de marca de agua traen
+en su EXIF mucho más de lo que se ve encima. Una foto real de campo contenía:
+
+```
+GPSLatitude/Longitude   coordenada exacta del avistamiento
+GPSHPositioningError    precisión declarada por el equipo
+GPSAltitude             altitud
+GPSImgDirection         rumbo de la cámara
+DateTimeOriginal        hora real de la toma
+ImageDescription        "PMF17"  <- el código de estación
+Orientation             3 = rotada 180 grados
+```
+
+**Lo implementado** (`app/src/media/`):
+
+- **Lector de EXIF propio**, ~150 líneas sin dependencias: en terreno cada
+  kilobyte del paquete cuenta y sólo hacen falta doce etiquetas.
+- **La foto propone, el usuario confirma.** Estación, fecha, hora y coordenada
+  se ofrecen en la tarjeta; nada se aplica solo. La estación sólo se propone si
+  el código escrito en la cámara coincide con una del catálogo.
+- **Coordenada convertida a UTM**, que es lo que pide la planilla. (El sello
+  visible de estas apps suele mostrar MGRS, que no sirve para el informe.)
+- **Compresión a 1600 px.** Una foto de teléfono pesa 5-6 MB; cien fotos de
+  jornada son 600 MB en el dispositivo y un respaldo inmanejable. A 1600 px
+  sigue sirviendo para verificar una identificación y pesa ~40 veces menos.
+- **Orientación aplicada a los píxeles.** Al recomprimir se pierde el EXIF, así
+  que la rotación hay que hornearla; si no, la foto se ve al revés.
+
+Si el navegador no puede decodificar la imagen, se guarda tal cual: perder la
+foto sería mucho peor que guardarla pesada.
+
 ---
 
 ## Lo que sigue faltando, y por qué

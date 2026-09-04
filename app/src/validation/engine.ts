@@ -10,7 +10,8 @@
 import { locationFixNeed, suggestsPhoto } from '../conservation/mobility';
 import { flagFor, isExotic } from '../conservation/status';
 import type { ObservationDraft } from '../domain/draft';
-import type { SamplingEvent, Taxon } from '../domain/types';
+import type { GeoFix, SamplingEvent, Station, Taxon } from '../domain/types';
+import { distanceMeters } from '../geo/utm';
 import type { EffortSummary } from '../effort/session';
 import { requirementFor, type RequirableField, type RequirementProfile } from './profiles';
 
@@ -37,7 +38,8 @@ export type IssueLevel =
   | 'occurrence';
 
 export interface ValidationIssue {
-  field: RequirableField | 'taxonAmbiguity' | 'sexScope' | 'lifeStageScope' | 'consistency' | 'conservation';
+  field: RequirableField | 'taxonAmbiguity' | 'sexScope' | 'lifeStageScope'
+    | 'consistency' | 'conservation' | 'stationDistance';
   severity: IssueSeverity;
   level: IssueLevel;
   message: string;
@@ -64,7 +66,19 @@ export interface ValidationContext {
   effort?: EffortSummary | null;
   /** Condiciones ambientales ya registradas en el evento. */
   conditions?: SamplingEvent['conditions'];
+  /** Posición actual del dispositivo y estación seleccionada, para el control de coherencia. */
+  fix?: GeoFix | null;
+  station?: Station | null;
+  /** Estaciones del proyecto, para poder ofrecer la más cercana. */
+  nearbyStations?: Station[];
 }
+
+/**
+ * Distancia a partir de la cual se sospecha que el usuario ya cambió de
+ * estación y olvidó actualizarla. Una estación de muestreo rara vez supera los
+ * 100-150 m de extensión, así que 200 m es holgado.
+ */
+const STATION_DRIFT_METERS = 200;
 
 export interface ValidationResult {
   issues: ValidationIssue[];
@@ -280,6 +294,28 @@ export function validateDraft(draft: ObservationDraft, ctx: ValidationContext): 
     if (effortRequirement === 'required') pendingFields.push('effort');
   }
 
+  // --- ¿seguimos en la estación que dice la pantalla? ---
+  // Es el error más caro de terreno: caminar a la siguiente estación y seguir
+  // dictando con la anterior seleccionada. Se avisa ANTES de guardar y nunca
+  // se cambia solo (brief §4).
+  const drift = stationDrift(ctx);
+  if (drift) {
+    const options: IssueOption[] = [];
+    if (drift.nearest) {
+      options.push({
+        label: `Cambiar a ${drift.nearest.station.stationCode} (${drift.nearest.distance} m)`,
+        patch: { stationId: drift.nearest.station.id },
+      });
+    }
+    options.push({ label: `Sigo en ${drift.station.stationCode}`, patch: {} });
+    issues.push({
+      field: 'stationDistance', severity: 'question', level: 'event',
+      message: `Estás a ${drift.distance} m de ${drift.station.stationCode}`
+        + `${drift.nearest ? `. La más cercana es ${drift.nearest.station.stationCode}` : ''}.`,
+      options,
+    });
+  }
+
   if (draft.aerial && draft.method !== 'transito_aereo') {
     issues.push({
       field: 'consistency', severity: 'info', level: 'occurrence',
@@ -292,6 +328,35 @@ export function validateDraft(draft: ObservationDraft, ctx: ValidationContext): 
     canSave: !issues.some((i) => i.severity === 'blocker'),
     pendingFields,
   };
+}
+
+interface StationDrift {
+  station: Station;
+  distance: number;
+  nearest: { station: Station; distance: number } | null;
+}
+
+/**
+ * Compara la posición del dispositivo con la de la estación seleccionada.
+ * No avisa si el GPS es peor que la propia distancia: sería ruido del GPS,
+ * no del usuario.
+ */
+function stationDrift(ctx: ValidationContext): StationDrift | null {
+  const { fix, station } = ctx;
+  if (!fix || !station || station.latitude == null || station.longitude == null) return null;
+
+  const here = { latitude: fix.latitude, longitude: fix.longitude };
+  const distance = Math.round(distanceMeters(here, { latitude: station.latitude, longitude: station.longitude }));
+  if (distance <= STATION_DRIFT_METERS) return null;
+  if (distance <= (fix.accuracyMeters ?? 0)) return null;
+
+  let nearest: StationDrift['nearest'] = null;
+  for (const candidate of ctx.nearbyStations ?? []) {
+    if (candidate.id === station.id || candidate.latitude == null || candidate.longitude == null) continue;
+    const d = Math.round(distanceMeters(here, { latitude: candidate.latitude, longitude: candidate.longitude }));
+    if (d < distance && (!nearest || d < nearest.distance)) nearest = { station: candidate, distance: d };
+  }
+  return { station, distance, nearest };
 }
 
 function isIndirect(recordType: string): boolean {
