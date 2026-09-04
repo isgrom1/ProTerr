@@ -398,15 +398,14 @@ las cuatro quedan identificadas N/E/S/O sin escribir nada.
 
 ## J.18 Modelo de licencia (decidido, sin implementar)
 
-**Dos días de USO por cada siete corridos, los que el usuario elija. No se
-acumulan**: los que no se usan se pierden al cerrarse la ventana. Gastados los
-dos, los cinco días restantes de esa ventana son de pago; después se abren otros
-dos gratis, y así indefinidamente.
+**Ciclo fijo que se repite: 2 días gratis, 5 días de pago, 2 gratis, 5 de pago,
+y así indefinidamente.**
 
-Es la misma economía que un ciclo de calendario —2 gratis y 5 de pago por
-semana— pero el usuario decide cuáles son los dos, en vez de que se lo asigne el
-almanaque. Quien sale poco a terreno no paga nunca; quien hace campaña seguida se
-queda sin crédito al tercer día.
+**Los 2 gratis de un ciclo no se suman a los 2 del siguiente.** No se ahorran ni
+se acumulan: si no se usan, se pierden al empezar los 5 de pago. Nunca hay 4 días
+gratis seguidos.
+
+El ciclo arranca con el primer uso y corre continuo desde ahí.
 
 La app **nunca deja de funcionar ni retiene los datos**. Lo que se bloquea en los
 días de pago es registrar nuevo; leer, exportar y respaldar lo ya guardado sigue
@@ -424,8 +423,6 @@ publicidad a una cualquiera.
 
 ### Lo que hay que resolver antes de construirlo
 
-- **Qué cuenta como día de uso.** Guardar un registro, se entiende. ¿Abrir la app
-  para mirar lo de ayer, también? Debería no contar: penalizaría revisar el trabajo.
 - **Dónde vive.** Exige un servidor que sepa quién eres y cuántos días llevas. Hoy
   no existe: la app no tiene cuenta, ni servidor, ni analítica.
 - **Separación estricta.** La licencia por un lado y los registros de fauna por otro.
