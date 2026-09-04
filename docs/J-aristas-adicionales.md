@@ -412,14 +412,36 @@ días de pago es registrar nuevo; leer, exportar y respaldar lo ya guardado sigu
 disponible siempre. Un dato de terreno que no se puede sacar es un dato secuestrado,
 y eso no se hace.
 
-**Publicidad: una sola, al abrir la app.** Nada durante el trabajo. La condición
-es que sea de marcas del rubro —equipamiento de terreno, óptica, outdoor— y no
-inventario de red genérico. Eso obliga a venderla directo, porque una red de
-publicidad entrega lo que tenga y además rastrea al dispositivo, lo que choca con
-el compromiso de que por esta app no pasan datos de proyectos de terceros.
+**Publicidad: una sola, al abrir la app.** Nada durante el trabajo, y nunca
+bloqueando el arranque: si no hay señal —que en terreno es lo normal— la app abre
+igual, sin aviso y sin esperar.
 
-Mientras no haya acuerdos directos, no hay aviso: es preferible ninguna
-publicidad a una cualquiera.
+Se sirve con una red de publicidad, no con acuerdos directos. La decisión es
+consciente: vender directo a marcas del rubro daría mejor inventario pero exige
+una labor comercial que hoy no existe. El precio de usar red es que se muestra lo
+que la red tenga, y que la red rastrea al dispositivo.
+
+En una PWA la red es **AdSense**, no AdMob: AdMob es para aplicaciones nativas
+con SDK y esta app es web. Eso obliga a tres cosas antes de encender nada:
+
+1. **Un dominio con la app publicada.** AdSense no aprueba una app que corre en
+   `localhost` ni en una IP de la red local.
+2. **Política de privacidad y aviso de cookies.** Los exige AdSense, y además hay
+   que escribirla en serio: tiene que decir que el aviso rastrea, y dejar
+   igualmente claro que **los registros de fauna nunca salen del dispositivo**.
+   Son dos cosas separadas y el usuario tiene que poder distinguirlas.
+3. **Aislamiento estricto.** El aviso vive en su propio recuadro y no comparte
+   nada con la base de datos local. Una consultora tiene que poder auditar que el
+   dato de su proyecto no pasó por ahí.
+
+### Cobro
+
+**PayPal, a la cuenta del autor.** Es lo disponible ahora y sirve para partir.
+Conviene saber que en Chile el retiro a cuenta bancaria funciona pero cuesta: una
+tarifa fija por retiro más un porcentaje por cambio de divisa, y los fondos
+llegan en un par de días hábiles. Para un cobro recurrente en pesos vale la pena
+comparar más adelante con Flow, Mercado Pago o Webpay, que cobran en moneda local
+y evitan la conversión.
 
 ### Lo que hay que resolver antes de construirlo
 
