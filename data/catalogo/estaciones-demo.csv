@@ -1,0 +1,15 @@
+# Estaciones de DEMOSTRACIÓN de ProTerr.
+#
+# Datos ficticios, creados para que la app se pueda probar sin cargar nada.
+# No corresponden a ningún proyecto ni ubicación real. Reemplázalas por las de
+# tu proyecto (Ajustes -> Catálogos, o tools/construir_catalogo.py).
+#
+# Coordenadas en UTM, huso 19 hemisferio sur (Chile central).
+id_estacion,proyecto,region,temporada,ambiente,ladera,utm_este,utm_norte,utm_este_inicio,utm_norte_inicio,utm_este_fin,utm_norte_fin,transecto,playback_aves,playback_anfibios,camara_trampa,trampa_sherman,muestreado_por
+EMF01,Proyecto de demostración,Valparaíso,Primavera,Matorral esclerófilo,Norte,270000,6350000,269950,6349900,270080,6350090,si,si,no,no,no,Equipo de terreno
+EMF02,Proyecto de demostración,Valparaíso,Primavera,Matorral esclerófilo,Sur,270400,6350200,270350,6350120,270470,6350290,si,no,no,si,no,Equipo de terreno
+EMF03,Proyecto de demostración,Valparaíso,Primavera,Bosque nativo,Este,270800,6350500,270740,6350430,270870,6350580,si,si,si,no,no,Equipo de terreno
+EMF04,Proyecto de demostración,Valparaíso,Primavera,Quebrada con curso de agua,Plano,271200,6350100,271140,6350030,271270,6350180,si,no,si,no,si,Equipo de terreno
+EMF05,Proyecto de demostración,Valparaíso,Primavera,Matorral bajo,Oeste,271600,6349800,271550,6349730,271680,6349880,si,no,no,si,si,Equipo de terreno
+EMF06,Proyecto de demostración,Valparaíso,Primavera,Pradera antrópica,Plano,272000,6349500,271950,6349430,272080,6349580,si,no,no,no,no,Equipo de terreno
+TA01,Proyecto de demostración,Valparaíso,Primavera,Punto de observación de vuelo,Plano,270600,6350700,,,,,no,no,no,no,no,Equipo de terreno

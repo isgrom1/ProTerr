@@ -1,0 +1,111 @@
+{
+ "method": [
+  "Transecto",
+  "Punto de conteo",
+  "Playback aves",
+  "Playback anfibios",
+  "Cámara trampa",
+  "Trampas Sherman",
+  "Grabadora acústica",
+  "Tránsito aéreo",
+  "Atropello",
+  "Registro oportunista",
+  "Otro"
+ ],
+ "recordType": [
+  "Individuo",
+  "Vocalización",
+  "Huella",
+  "Fecas",
+  "Madriguera",
+  "Cururera",
+  "Plumas",
+  "Muda",
+  "Huesos",
+  "Nido",
+  "Egagrópila",
+  "Registro de audio",
+  "Otro"
+ ],
+ "behaviour": [
+  "Alimentándose",
+  "Bebiendo",
+  "Cazando",
+  "Corriendo",
+  "Cortejo",
+  "Descansando",
+  "Desplazándose",
+  "Durmiendo",
+  "En suelo",
+  "Escondido",
+  "Nadando",
+  "Nidificando",
+  "Posado",
+  "Termorregulando",
+  "Vocalizando",
+  "Volando",
+  "Agrupación",
+  "Otro"
+ ],
+ "flightHeightCategory": [
+  "1",
+  "2",
+  "3",
+  "4",
+  "5"
+ ],
+ "flightDirection": [
+  "N",
+  "NE",
+  "E",
+  "SE",
+  "S",
+  "SO",
+  "O",
+  "NO",
+  "Otro"
+ ],
+ "slopeAspect": [
+  "Norte",
+  "Noreste",
+  "Este",
+  "Sureste",
+  "Sur",
+  "Suroeste",
+  "Oeste",
+  "Noroeste",
+  "Plano",
+  "Otro"
+ ],
+ "lifeStage": [
+  "Adulto",
+  "Juvenil",
+  "Cría",
+  "Huevo/Larva",
+  "Indeterminado"
+ ],
+ "organismCondition": [
+  "Vivo",
+  "Muerto",
+  "Herido",
+  "Indeterminado"
+ ],
+ "sex": [
+  "Macho",
+  "Hembra",
+  "Indeterminado"
+ ],
+ "weather": [
+  "Despejado",
+  "Parcial",
+  "Nublado",
+  "Llovizna",
+  "Lluvia",
+  "Neblina",
+  "Viento"
+ ],
+ "occurrenceEvidenceKind": [
+  "Directo",
+  "Indirecto"
+ ]
+}

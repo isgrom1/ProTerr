@@ -1,0 +1,167 @@
+# Catálogo taxonómico de arranque de ProTerr.
+#
+# Escrito para este proyecto a partir de la nomenclatura zoológica de uso
+# corriente en Chile. Contiene nombre común, nombre científico y clasificación,
+# que son hechos científicos de dominio público.
+#
+# NO es una lista exhaustiva ni autoritativa: es un punto de partida para que la
+# app funcione desde el primer día. Cada organización debe cargar su propio
+# catálogo (Ajustes -> Catálogo de especies, o tools/construir_catalogo.py) con
+# la lista que use en sus informes.
+nombre_comun,nombre_cientifico,clase,orden,familia
+Chucao,Scelorchilus rubecula,Aves,Passeriformes,Rhinocryptidae
+Tapaculo,Scelorchilus albicollis,Aves,Passeriformes,Rhinocryptidae
+Hued-hued del sur,Pteroptochos tarnii,Aves,Passeriformes,Rhinocryptidae
+Turca,Pteroptochos megapodius,Aves,Passeriformes,Rhinocryptidae
+Churrín del sur,Scytalopus magellanicus,Aves,Passeriformes,Rhinocryptidae
+Rayadito,Aphrastura spinicauda,Aves,Passeriformes,Furnariidae
+Tijeral,Leptasthenura aegithaloides,Aves,Passeriformes,Furnariidae
+Churrete,Cinclodes patagonicus,Aves,Passeriformes,Furnariidae
+Bandurrilla,Upucerthia dumetaria,Aves,Passeriformes,Furnariidae
+Canastero,Asthenes humicola,Aves,Passeriformes,Furnariidae
+Picaflor chico,Sephanoides sephaniodes,Aves,Apodiformes,Trochilidae
+Picaflor gigante,Patagona gigas,Aves,Apodiformes,Trochilidae
+Picaflor de Arica,Eulidia yarrellii,Aves,Apodiformes,Trochilidae
+Zorzal,Turdus falcklandii,Aves,Passeriformes,Turdidae
+Chercán,Troglodytes aedon,Aves,Passeriformes,Troglodytidae
+Diucón,Xolmis pyrope,Aves,Passeriformes,Tyrannidae
+Fío-fío,Elaenia albiceps,Aves,Passeriformes,Tyrannidae
+Cachudito,Anairetes parulus,Aves,Passeriformes,Tyrannidae
+Colegial,Lessonia rufa,Aves,Passeriformes,Tyrannidae
+Run-run,Hymenops perspicillatus,Aves,Passeriformes,Tyrannidae
+Siete colores,Tachuris rubrigastra,Aves,Passeriformes,Tyrannidae
+Mero,Agriornis lividus,Aves,Passeriformes,Tyrannidae
+Loica,Leistes loyca,Aves,Passeriformes,Icteridae
+Tordo,Curaeus curaeus,Aves,Passeriformes,Icteridae
+Mirlo,Molothrus bonariensis,Aves,Passeriformes,Icteridae
+Trile,Agelasticus thilius,Aves,Passeriformes,Icteridae
+Diuca,Diuca diuca,Aves,Passeriformes,Thraupidae
+Cometocino de Gay,Phrygilus gayi,Aves,Passeriformes,Thraupidae
+Yal,Rhopospina fruticeti,Aves,Passeriformes,Thraupidae
+Chincol,Zonotrichia capensis,Aves,Passeriformes,Passerellidae
+Jilguero,Spinus barbatus,Aves,Passeriformes,Fringillidae
+Gorrión,Passer domesticus,Aves,Passeriformes,Passeridae
+Bailarín chico,Anthus correndera,Aves,Passeriformes,Motacillidae
+Golondrina chilena,Tachycineta meyeni,Aves,Passeriformes,Hirundinidae
+Golondrina de dorso negro,Pygochelidon cyanoleuca,Aves,Passeriformes,Hirundinidae
+Carpintero negro,Campephilus magellanicus,Aves,Piciformes,Picidae
+Pitío,Colaptes pitius,Aves,Piciformes,Picidae
+Carpinterito,Veniliornis lignarius,Aves,Piciformes,Picidae
+Tiuque,Milvago chimango,Aves,Falconiformes,Falconidae
+Traro,Caracara plancus,Aves,Falconiformes,Falconidae
+Cernícalo,Falco sparverius,Aves,Falconiformes,Falconidae
+Halcón peregrino,Falco peregrinus,Aves,Falconiformes,Falconidae
+Aguilucho,Geranoaetus polyosoma,Aves,Accipitriformes,Accipitridae
+Águila,Geranoaetus melanoleucus,Aves,Accipitriformes,Accipitridae
+Peuco,Parabuteo unicinctus,Aves,Accipitriformes,Accipitridae
+Peuquito,Accipiter chilensis,Aves,Accipitriformes,Accipitridae
+Cóndor,Vultur gryphus,Aves,Cathartiformes,Cathartidae
+Jote de cabeza colorada,Cathartes aura,Aves,Cathartiformes,Cathartidae
+Jote de cabeza negra,Coragyps atratus,Aves,Cathartiformes,Cathartidae
+Lechuza,Tyto alba,Aves,Strigiformes,Tytonidae
+Chuncho,Glaucidium nana,Aves,Strigiformes,Strigidae
+Pequén,Athene cunicularia,Aves,Strigiformes,Strigidae
+Tucúquere,Bubo magellanicus,Aves,Strigiformes,Strigidae
+Concón,Strix rufipes,Aves,Strigiformes,Strigidae
+Nuco,Asio flammeus,Aves,Strigiformes,Strigidae
+Paloma,Columba livia,Aves,Columbiformes,Columbidae
+Torcaza,Patagioenas araucana,Aves,Columbiformes,Columbidae
+Tórtola,Zenaida auriculata,Aves,Columbiformes,Columbidae
+Tortolita cuyana,Columbina picui,Aves,Columbiformes,Columbidae
+Perdiz chilena,Nothoprocta perdicaria,Aves,Tinamiformes,Tinamidae
+Codorniz,Callipepla californica,Aves,Galliformes,Odontophoridae
+Queltehue,Vanellus chilensis,Aves,Charadriiformes,Charadriidae
+Pilpilén,Haematopus palliatus,Aves,Charadriiformes,Haematopodidae
+Gaviota dominicana,Larus dominicanus,Aves,Charadriiformes,Laridae
+Gaviota cáhuil,Chroicocephalus maculipennis,Aves,Charadriiformes,Laridae
+Garza cuca,Ardea cocoi,Aves,Pelecaniformes,Ardeidae
+Garza grande,Ardea alba,Aves,Pelecaniformes,Ardeidae
+Garza chica,Egretta thula,Aves,Pelecaniformes,Ardeidae
+Huairavo,Nycticorax nycticorax,Aves,Pelecaniformes,Ardeidae
+Bandurria,Theristicus melanopis,Aves,Pelecaniformes,Threskiornithidae
+Pelícano,Pelecanus thagus,Aves,Pelecaniformes,Pelecanidae
+Cisne de cuello negro,Cygnus melancoryphus,Aves,Anseriformes,Anatidae
+Pato jergón grande,Anas georgica,Aves,Anseriformes,Anatidae
+Pato real,Anas sibilatrix,Aves,Anseriformes,Anatidae
+Pato cuchara,Spatula platalea,Aves,Anseriformes,Anatidae
+Tagua,Fulica armillata,Aves,Gruiformes,Rallidae
+Tagua chica,Fulica leucoptera,Aves,Gruiformes,Rallidae
+Pimpollo,Rollandia rolland,Aves,Podicipediformes,Podicipedidae
+Blanquillo,Podiceps occipitalis,Aves,Podicipediformes,Podicipedidae
+Pingüino de Humboldt,Spheniscus humboldti,Aves,Sphenisciformes,Spheniscidae
+Yeco,Nannopterum brasilianum,Aves,Suliformes,Phalacrocoracidae
+Pato lile,Phalacrocorax gaimardi,Aves,Suliformes,Phalacrocoracidae
+Piquero,Sula variegata,Aves,Suliformes,Sulidae
+Albatros de ceja negra,Thalassarche melanophris,Aves,Procellariiformes,Diomedeidae
+Fardela negra,Ardenna grisea,Aves,Procellariiformes,Procellariidae
+Golondrina de mar,Oceanites oceanicus,Aves,Procellariiformes,Oceanitidae
+Loro tricahue,Cyanoliseus patagonus,Aves,Psittaciformes,Psittacidae
+Cachaña,Enicognathus ferrugineus,Aves,Psittaciformes,Psittacidae
+Choroy,Enicognathus leptorhynchus,Aves,Psittaciformes,Psittacidae
+Ñandú,Rhea pennata,Aves,Rheiformes,Rheidae
+Martín pescador,Megaceryle torquata,Aves,Coraciiformes,Alcedinidae
+Zorro culpeo,Lycalopex culpaeus,Mamíferos,Carnivora,Canidae
+Zorro chilla,Lycalopex griseus,Mamíferos,Carnivora,Canidae
+Zorro de Darwin,Lycalopex fulvipes,Mamíferos,Carnivora,Canidae
+Puma,Puma concolor,Mamíferos,Carnivora,Felidae
+Güiña,Leopardus guigna,Mamíferos,Carnivora,Felidae
+Gato colocolo,Leopardus colocola,Mamíferos,Carnivora,Felidae
+Gato andino,Leopardus jacobita,Mamíferos,Carnivora,Felidae
+Quique,Galictis cuja,Mamíferos,Carnivora,Mustelidae
+Chingue,Conepatus chinga,Mamíferos,Carnivora,Mephitidae
+Huillín,Lontra provocax,Mamíferos,Carnivora,Mustelidae
+Chungungo,Lontra felina,Mamíferos,Carnivora,Mustelidae
+Visón,Neogale vison,Mamíferos,Carnivora,Mustelidae
+Lobo marino común,Otaria flavescens,Mamíferos,Carnivora,Otariidae
+Guanaco,Lama guanicoe,Mamíferos,Artiodactyla,Camelidae
+Vicuña,Vicugna vicugna,Mamíferos,Artiodactyla,Camelidae
+Huemul,Hippocamelus bisulcus,Mamíferos,Artiodactyla,Cervidae
+Pudú,Pudu puda,Mamíferos,Artiodactyla,Cervidae
+Ciervo rojo,Cervus elaphus,Mamíferos,Artiodactyla,Cervidae
+Jabalí,Sus scrofa,Mamíferos,Artiodactyla,Suidae
+Vizcacha,Lagidium viscacia,Mamíferos,Rodentia,Chinchillidae
+Chinchilla costina,Chinchilla lanigera,Mamíferos,Rodentia,Chinchillidae
+Degú,Octodon degus,Mamíferos,Rodentia,Octodontidae
+Degú costino,Octodon lunatus,Mamíferos,Rodentia,Octodontidae
+Cururo,Spalacopus cyanus,Mamíferos,Rodentia,Octodontidae
+Coipo,Myocastor coypus,Mamíferos,Rodentia,Echimyidae
+Tuco-tuco del Maule,Ctenomys maulinus,Mamíferos,Rodentia,Ctenomyidae
+Ratón de cola larga,Oligoryzomys longicaudatus,Mamíferos,Rodentia,Cricetidae
+Ratón oliváceo,Abrothrix olivacea,Mamíferos,Rodentia,Cricetidae
+Ratón lanudo,Abrothrix longipilis,Mamíferos,Rodentia,Cricetidae
+Ratón orejudo de Darwin,Phyllotis darwini,Mamíferos,Rodentia,Cricetidae
+Ratón chinchilla,Abrocoma bennettii,Mamíferos,Rodentia,Abrocomidae
+Laucha,Mus musculus,Mamíferos,Rodentia,Muridae
+Rata negra,Rattus rattus,Mamíferos,Rodentia,Muridae
+Guarén,Rattus norvegicus,Mamíferos,Rodentia,Muridae
+Conejo,Oryctolagus cuniculus,Mamíferos,Lagomorpha,Leporidae
+Liebre,Lepus europaeus,Mamíferos,Lagomorpha,Leporidae
+Monito del monte,Dromiciops gliroides,Mamíferos,Microbiotheria,Microbiotheriidae
+Yaca,Thylamys elegans,Mamíferos,Didelphimorphia,Didelphidae
+Murciélago orejudo,Histiotus montanus,Mamíferos,Chiroptera,Vespertilionidae
+Murciélago de cola libre,Tadarida brasiliensis,Mamíferos,Chiroptera,Molossidae
+Murciélago oreja de ratón,Myotis chiloensis,Mamíferos,Chiroptera,Vespertilionidae
+Lagartija esbelta,Liolaemus tenuis,Reptiles,Squamata,Liolaemidae
+Lagarto llorón,Liolaemus chiliensis,Reptiles,Squamata,Liolaemidae
+Lagartija lemniscata,Liolaemus lemniscatus,Reptiles,Squamata,Liolaemidae
+Lagarto de Zapallar,Liolaemus zapallarensis,Reptiles,Squamata,Liolaemidae
+Lagartija parda,Liolaemus fuscus,Reptiles,Squamata,Liolaemidae
+Lagarto nítido,Liolaemus nitidus,Reptiles,Squamata,Liolaemidae
+Lagartija de Bell,Liolaemus bellii,Reptiles,Squamata,Liolaemidae
+Lagartija de montaña,Liolaemus monticola,Reptiles,Squamata,Liolaemidae
+Matuasto,Phymaturus palluma,Reptiles,Squamata,Liolaemidae
+Corredor de Atacama,Microlophus atacamensis,Reptiles,Squamata,Tropiduridae
+Gruñidor,Pristidactylus torquatus,Reptiles,Squamata,Leiosauridae
+Iguana chilena,Callopistes maculatus,Reptiles,Squamata,Teiidae
+Culebra de cola larga,Philodryas chamissonis,Reptiles,Squamata,Dipsadidae
+Culebra de cola corta,Tachymenis chilensis,Reptiles,Squamata,Dipsadidae
+Tortuga verde,Chelonia mydas,Reptiles,Testudines,Cheloniidae
+Sapito de cuatro ojos,Pleurodema thaul,Anfibios,Anura,Leptodactylidae
+Ranita de Darwin,Rhinoderma darwinii,Anfibios,Anura,Rhinodermatidae
+Sapo de rulo,Rhinella arunco,Anfibios,Anura,Bufonidae
+Sapo espinoso,Rhinella spinulosa,Anfibios,Anura,Bufonidae
+Rana chilena,Calyptocephalella gayi,Anfibios,Anura,Calyptocephalellidae
+Sapo arriero,Alsodes nodosus,Anfibios,Anura,Alsodidae
+Rana de pecho espinoso,Alsodes monticola,Anfibios,Anura,Alsodidae
+Sapito vaquero,Batrachyla taeniata,Anfibios,Anura,Batrachylidae
+Rana africana,Xenopus laevis,Anfibios,Anura,Pipidae

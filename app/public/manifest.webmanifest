@@ -1,0 +1,12 @@
+{
+  "name": "ProTerr — Registro de fauna en terreno",
+  "short_name": "ProTerr",
+  "start_url": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0f1a14",
+  "theme_color": "#0f1a14",
+  "icons": [
+    { "src": "./icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
