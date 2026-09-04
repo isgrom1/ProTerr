@@ -396,6 +396,33 @@ las cuatro quedan identificadas N/E/S/O sin escribir nada.
 
 ---
 
+## J.18 Modelo de licencia (decidido, sin implementar)
+
+**Ciclo fijo de 7 días que se repite: 2 días gratis, 5 días de pago.** Terminados
+los 5, se abren otros 2 gratis, y así indefinidamente. No se acumulan: los 2 días
+que no se usan se pierden al cerrarse la ventana.
+
+La app **nunca deja de funcionar ni retiene los datos**. Lo que se bloquea en los
+días de pago es registrar nuevo; leer, exportar y respaldar lo ya guardado sigue
+disponible siempre. Un dato de terreno que no se puede sacar es un dato secuestrado,
+y eso no se hace.
+
+**Sin publicidad.** Un consultor abre esta app frente al mandante; un aviso ahí le
+quita seriedad al informe que la app produce.
+
+### Lo que hay que resolver antes de construirlo
+
+- **A qué se ancla el ciclo.** Si corre por calendario, dos días de campaña que
+  caigan en la ventana equivocada se pagan y los mismos dos días una semana después
+  no. El usuario no controla en qué parte del ciclo está, y eso se siente arbitrario.
+  La alternativa que conserva la misma economía es contar **días de uso**, no de
+  calendario: dos días de registro por cada siete corridos, los que el usuario elija.
+- **Dónde vive.** Exige un servidor que sepa quién eres y cuántos días llevas. Hoy
+  no existe: la app no tiene cuenta, ni servidor, ni analítica.
+- **Separación estricta.** La licencia por un lado y los registros de fauna por otro.
+  El servidor de licencias no puede ver ni un dato de terreno: son datos de proyectos
+  de terceros y ése es el compromiso que la app tiene hoy por no tener servidor.
+
 ## Lo que sigue faltando, y por qué
 
 **Trabajo simultáneo de varias personas en la misma estación.** Hoy cada
