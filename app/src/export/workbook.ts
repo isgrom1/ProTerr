@@ -18,13 +18,21 @@ export interface WorkbookContext {
   placeholders?: Record<string, string>;
 }
 
+const TRAPPING = new Set<SamplingEvent['method']>(['trampa_sherman', 'camara_trampa']);
+/** Metodologías que salen en su propia hoja y por eso no van en "Registros". */
+const OWN_SHEET = new Set<SamplingEvent['method']>(['transito_aereo', ...TRAPPING]);
+
 /** Selecciona las filas que alimentan una hoja según su alcance. */
 function rowsFor(scope: SheetScope, records: FlatRecord[], events: SamplingEvent[]): FlatRecord[] {
   switch (scope) {
+    // Cada metodología con columnas propias sale en su hoja; "registros" es
+    // el resto, para no arrastrar columnas vacías por toda la planilla.
     case 'registros':
-      return records.filter((r) => r.event.method !== 'transito_aereo');
+      return records.filter((r) => !OWN_SHEET.has(r.event.method));
     case 'transito_aereo':
       return records.filter((r) => r.event.method === 'transito_aereo');
+    case 'trampeo':
+      return records.filter((r) => TRAPPING.has(r.event.method));
     case 'registros_todos':
       return records;
     case 'muestreos':

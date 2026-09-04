@@ -296,3 +296,75 @@ describe('la vocalización llena la conducta, se diga como se diga', () => {
     }
   });
 });
+
+describe('cabecera del punto', () => {
+  it('lee la nota que se hacía a mano al llegar a la estación', () => {
+    const r = parse('EMF09 hora de inicio. Inclinación plano-este-oeste. Soleado');
+    expect(r.stationCode).toBe('EMF09');
+    expect(r.header.opensPoint).toBe(true);
+    expect(r.header.slopeAspect).toBe('Plano-Este-Oeste');
+    expect(r.header.weather).toBe('Despejado');
+    expect(r.observations).toHaveLength(0);
+    // Abrir el punto no es un dictado fallido.
+    expect(r.warnings).toHaveLength(0);
+  });
+
+  it('no confunde la ladera del punto con el rumbo de vuelo', () => {
+    const r = parse('EMF09 inclinación ladera sur, dos cóndores volando hacia el norte');
+    expect(r.header.slopeAspect).toBe('Ladera-Sur');
+    expect(r.observations).toHaveLength(1);
+    expect(r.observations[0].aerial?.destination).toBe('N');
+  });
+
+  it('acepta la cabecera pegada a los registros', () => {
+    const r = parse('EMF09 nublado, un macho de loica posado');
+    expect(r.header.weather).toBe('Nublado');
+    expect(r.observations).toHaveLength(1);
+    expect(r.observations[0].sex).toBe('Macho');
+    expect(r.observations[0].behaviour).toBe('Posado');
+  });
+});
+
+describe('especie nombrada por su palabra distintiva', () => {
+  it('resuelve el epíteto que se dice solo en terreno', () => {
+    const r = parse('sherman de PMF34, olivaceo en la trampa 11');
+    expect(r.observations).toHaveLength(1);
+    expect(nameOf(r.observations[0].taxonIds)).toBe('Ratón oliváceo');
+    expect(r.observations[0].taxonNeedsDisambiguation).toBe(false);
+  });
+
+  it('reconoce "culpeo" sin el genérico', () => {
+    const r = parse('un culpeo cruzando el camino');
+    expect(nameOf(r.observations[0].taxonIds)).toBe('Zorro culpeo');
+  });
+
+  it('no le roba palabras al resto del dictado', () => {
+    // "posado" es conducta, no especie, aunque apareciera en algún nombre.
+    const r = parse('EMF09 una loica posada');
+    expect(r.observations).toHaveLength(1);
+    expect(nameOf(r.observations[0].taxonIds)).toBe('Loica');
+  });
+});
+
+describe('trampeo Sherman', () => {
+  it('separa la trampa de la línea a la que pertenece', () => {
+    const r = parse('sherman de PMF34, olivaceo en trampa 11 de la linea asociada al punto 40');
+    expect(r.method).toBe('trampa_sherman');
+    expect(r.stationCode).toBe('PMF34');
+    expect(r.siteName).toBe('Línea 40');
+    expect(r.observations).toHaveLength(1);
+    expect(nameOf(r.observations[0].taxonIds)).toBe('Ratón oliváceo');
+    expect(r.observations[0].trapNumber).toBe('11');
+  });
+
+  it('entiende el número de trampa dicho en palabras', () => {
+    const r = parse('PMF34 degu en la trampa once');
+    expect(r.observations[0].trapNumber).toBe('11');
+  });
+
+  it('no confunde "trampa sherman" con una trampa numerada', () => {
+    const r = parse('trampa sherman en PMF34, un degu');
+    expect(r.method).toBe('trampa_sherman');
+    expect(r.observations[0].trapNumber).toBeNull();
+  });
+});

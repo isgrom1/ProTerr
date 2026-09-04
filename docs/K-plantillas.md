@@ -90,7 +90,23 @@ lo válido. El archivo original nunca se modifica.
 
 ## K.7 El formato nativo
 
-`NATIVE_TEMPLATE` es la plantilla que trae ProTerr, y es una plantilla más: tres
-hojas (`Registros`, `Muestreos`, `Estaciones`) con encabezados propios que
-incluyen esfuerzo, conservación y trazabilidad. Sirve mientras la organización no
-cargue el suyo, y de ejemplo de cómo se arma una plantilla.
+`NATIVE_TEMPLATE` es la plantilla que trae ProTerr, y es una plantilla más:
+cinco hojas con encabezados propios que incluyen esfuerzo, conservación y
+trazabilidad. Sirve mientras la organización no cargue el suyo, y de ejemplo de
+cómo se arma una plantilla.
+
+**Una hoja por metodología, no una hoja con todas las columnas.** Es como están
+armadas las planillas de terreno, y por una razón práctica: el origen del vuelo
+no existe en un transecto y la trampa no existe fuera del trampeo, así que
+juntarlo todo deja columnas vacías en casi todas las filas.
+
+| Hoja | Alcance (`scope`) | Qué lleva de más |
+| --- | --- | --- |
+| `Registros` | `registros` | Todo lo que no tiene hoja propia |
+| `Trampeo` | `trampeo` | Línea, n° de trampa, código del individuo, recaptura |
+| `Tránsito aéreo` | `transito_aereo` | Origen, destino, dirección y altura de vuelo |
+| `Muestreos` | `muestreos` | Una fila por evento, con esfuerzo |
+| `Estaciones` | `estaciones` | Una fila por estación |
+
+El alcance `registros_todos` sigue existiendo para una plantilla ajena que sí
+quiera una sola hoja con todo.

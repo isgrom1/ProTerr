@@ -65,6 +65,7 @@ const catalogs: Catalogs = {
 
 const e1 = event('e1', 'transecto');
 const e2 = event('e2', 'transito_aereo');
+const e3 = event('e3', 'trampa_sherman');
 const occs = [
   occurrence('o1', 'e1', {}),
   occurrence('o2', 'e1', { taxonId: byName('Puma').id, recordType: 'Fecas', evidenceKind: 'Indirecto', individualCount: null, behaviour: null }),
@@ -73,12 +74,16 @@ const occs = [
     aerial: { flightDirection: 'N', destination: 'N', flightHeightMeters: 20, flightHeightCategory: '3', origin: 'S' },
   }),
   occurrence('o4', 'e1', { deletedAt: '2026-09-04T11:00:00-04:00' }),
+  occurrence('o5', 'e3', {
+    taxonId: byName('Ratón oliváceo').id, recordType: 'Individuo', individualCount: 1,
+    behaviour: null, trapNumber: '11', organismId: 'M-07', recapture: false,
+  }),
 ];
-const records = flatten(occs, new Map([[e1.id, e1], [e2.id, e2]]), catalogs);
+const records = flatten(occs, new Map([[e1.id, e1], [e2.id, e2], [e3.id, e3]]), catalogs);
 
 describe('aplanado', () => {
   it('omite los registros borrados lógicamente', () => {
-    expect(records).toHaveLength(3);
+    expect(records).toHaveLength(4);
   });
 });
 
@@ -94,6 +99,33 @@ describe('exportación por plantilla', () => {
   it('escribe los encabezados exactos de la plantilla', () => {
     const header = XLSX.utils.sheet_to_json<unknown[]>(wb.Sheets.Registros, { header: 1 })[0] as string[];
     expect(header).toEqual(NATIVE_TEMPLATE.sheets[0].columns.map((c) => c.header));
+  });
+
+  it('no mezcla las columnas de vuelo en la hoja de registros', () => {
+    const header = XLSX.utils.sheet_to_json<unknown[]>(wb.Sheets.Registros, { header: 1 })[0] as string[];
+    expect(header.some((h) => /vuelo|altura/i.test(h))).toBe(false);
+    const codes = XLSX.utils.sheet_to_json<Record<string, unknown>>(wb.Sheets.Registros)
+      .map((r) => r['Metodología']);
+    expect(codes).not.toContain('Tránsito aéreo');
+  });
+
+  it('lleva el trampeo a su propia hoja, con la trampa donde cayó el animal', () => {
+    const trampeo = XLSX.utils.sheet_to_json<Record<string, unknown>>(wb.Sheets.Trampeo);
+    expect(trampeo).toHaveLength(1);
+    expect(trampeo[0]['Nombre común']).toBe('Ratón oliváceo');
+    expect(trampeo[0]['N° de trampa']).toBe('11');
+    expect(trampeo[0]['Código del individuo']).toBe('M-07');
+    // Y no aparece además en la hoja general.
+    const registros = XLSX.utils.sheet_to_json<Record<string, unknown>>(wb.Sheets.Registros);
+    expect(registros.map((r) => r['Nombre común'])).not.toContain('Ratón oliváceo');
+  });
+
+  it('lleva el tránsito aéreo a su propia hoja, con origen y destino de vuelo', () => {
+    const aerea = XLSX.utils.sheet_to_json<Record<string, unknown>>(wb.Sheets['Tránsito aéreo']);
+    expect(aerea).toHaveLength(1);
+    expect(aerea[0]['Nombre común']).toBe('Cóndor');
+    expect(aerea[0]['Origen del vuelo']).toBe('S');
+    expect(aerea[0]['Destino del vuelo']).toBe('N');
   });
 
   it('resuelve contra el catálogo lo que antes eran fórmulas de la planilla', () => {
@@ -200,7 +232,7 @@ describe('exportación Darwin Core', () => {
 
   it('escribe un evento por muestreo, no uno por observación', () => {
     const lines = archive['event.txt'].trim().split('\n');
-    expect(lines).toHaveLength(3); // encabezado + 2 eventos
+    expect(lines).toHaveLength(4); // encabezado + 3 eventos
   });
 
   it('usa basisOfRecord válido y no inventa individuos en evidencia indirecta', () => {
@@ -225,7 +257,7 @@ describe('exportación Darwin Core', () => {
   it('exporta CSV con el mismo encabezado Darwin Core', () => {
     const csv = toCsv(records);
     expect(csv.split('\n')[0]).toBe(OCCURRENCE_TERMS.join(','));
-    expect(csv.trim().split('\n')).toHaveLength(4);
+    expect(csv.trim().split('\n')).toHaveLength(5);
   });
 });
 

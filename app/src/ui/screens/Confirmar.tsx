@@ -61,6 +61,10 @@ function DraftCard({ draft, index }: { draft: ObservationDraft; index: number })
   const vocab = s.vocabularies;
   const patch = (p: Partial<ObservationDraft>) => s.patchDraft(draft.draftId, p);
   const isAerial = draft.method === 'transito_aereo';
+  // Cada metodología pide lo suyo: la trampa y la línea sólo existen en
+  // trampeo, igual que el origen del vuelo sólo existe en tránsito aéreo.
+  const isTrapping = draft.method === 'trampa_sherman' || draft.method === 'camara_trampa';
+  const sites = (station?.sites ?? []).filter((site) => site.kind === draft.method);
 
   return (
     <section className="card">
@@ -195,6 +199,31 @@ function DraftCard({ draft, index }: { draft: ObservationDraft; index: number })
                 onChange={(e) => patch({ organismId: e.target.value || null })} />
             </Field>
           </div>
+
+          {/* Trampeo: dónde cayó el animal. La línea es el sitio dentro de la
+              estación; la trampa, el número dentro de la línea. */}
+          {isTrapping && (
+            <div className="grid2">
+              <Field label="N° de trampa">
+                <input type="text" value={draft.trapNumber ?? ''} placeholder="11"
+                  onChange={(e) => patch({ trapNumber: e.target.value || null })} />
+              </Field>
+              <Field label="Línea o sitio">
+                <select value={draft.siteId ?? ''} onChange={(e) => patch({ siteId: e.target.value || null })}>
+                  <option value="">Sin especificar</option>
+                  {sites.map((site) => <option key={site.id} value={site.id}>{site.name}</option>)}
+                </select>
+              </Field>
+              <Field label="Recaptura">
+                <select value={draft.recapture === null ? '' : String(draft.recapture)}
+                  onChange={(e) => patch({ recapture: e.target.value === '' ? null : e.target.value === 'true' })}>
+                  <option value="">Sin dato</option>
+                  <option value="false">No</option>
+                  <option value="true">Sí</option>
+                </select>
+              </Field>
+            </div>
+          )}
 
           {/* Los campos de tránsito aéreo sólo existen en su metodología (§27). */}
           {isAerial && (

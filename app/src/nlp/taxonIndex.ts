@@ -33,6 +33,12 @@ export class TaxonIndex {
   private keys: string[] = [];
   /** Claves agrupadas por su primera palabra, para el match por prefijo. */
   private byFirstWord = new Map<string, string[]>();
+  /**
+   * Claves agrupadas por cada palabra INTERIOR ("olivaceo" -> "raton
+   * olivaceo"). En terreno se nombra la especie por su palabra distintiva y se
+   * omite el genérico: "olivaceo en la trampa 11", "vi un culpeo".
+   */
+  private byInnerWord = new Map<string, string[]>();
 
   constructor(taxa: Taxon[]) {
     for (const t of taxa) {
@@ -54,6 +60,14 @@ export class TaxonIndex {
       const list = this.byFirstWord.get(first);
       if (list) list.push(key);
       else this.byFirstWord.set(first, [key]);
+
+      for (const word of key.split(' ').slice(1)) {
+        // Palabras cortas ("de", "cola", "gris") no distinguen nada.
+        if (word.length < MIN_INNER_WORD) continue;
+        const inner = this.byInnerWord.get(word);
+        if (inner) inner.push(key);
+        else this.byInnerWord.set(word, [key]);
+      }
     }
   }
 
@@ -144,6 +158,34 @@ export class TaxonIndex {
   }
 
   /**
+   * Palabra distintiva: el usuario dice sólo el adjetivo o el epíteto
+   * ("olivaceo", "culpeo") y omite el genérico. Va DESPUÉS del prefijo para
+   * que "raton" siga resolviéndose por su nombre completo, y sólo acepta
+   * palabras que no signifiquen otra cosa en el dictado (`reserved`) ni
+   * apunten a media docena de especies: si no distingue, no sirve.
+   */
+  matchWordAt(tokens: string[], start: number, reserved?: Set<string>): TaxonMatch | null {
+    const token = tokens[start];
+    if (!token || !/^[a-z]+$/.test(token)) return null;
+    for (const word of [token, ...singularCandidates(token).slice(1)]) {
+      if (word.length < MIN_INNER_WORD || reserved?.has(word)) continue;
+      const keys = this.byInnerWord.get(word);
+      if (!keys) continue;
+      const ids: string[] = [];
+      for (const key of keys) {
+        for (const id of this.byKey.get(key) ?? []) if (!ids.includes(id)) ids.push(id);
+      }
+      if (!ids.length || ids.length > MAX_INNER_CANDIDATES) continue;
+      return {
+        taxonIds: ids, matchedKey: word, length: 1,
+        confidence: ids.length === 1 ? 0.85 : 0.6,
+        ambiguous: ids.length > 1,
+      };
+    }
+    return null;
+  }
+
+  /**
    * Corrección ortográfica. Se usa como última pasada, cuando ninguna posición
    * del texto dio un match exacto ni por prefijo: si no, una palabra corriente
    * ("dos", "macho") podría ganarle a la especie que sí está escrita bien.
@@ -171,6 +213,11 @@ export class TaxonIndex {
     return null;
   }
 }
+
+/** Bajo esto una palabra interior no distingue nada ("cola", "gris"). */
+const MIN_INNER_WORD = 5;
+/** Si la palabra apunta a más especies que esto, no es distintiva. */
+const MAX_INNER_CANDIDATES = 3;
 
 function pluralVariants(window: string[]): string[] {
   const out = new Set<string>();

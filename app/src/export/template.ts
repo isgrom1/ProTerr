@@ -19,6 +19,8 @@ export type SheetScope =
   | 'registros'
   /** Una fila por observación de tránsito aéreo. */
   | 'transito_aereo'
+  /** Una fila por observación de trampeo (Sherman y cámara trampa). */
+  | 'trampeo'
   /** Una fila por observación, todas juntas. */
   | 'registros_todos'
   /** Una fila por muestreo (evento). */
@@ -74,12 +76,15 @@ export const NATIVE_TEMPLATE: ExportTemplate = {
   builtin: true,
   sheets: [
     {
+      // Los campos de vuelo NO viven aquí: en un transecto no existen y una
+      // columna vacía en cada fila sólo estorba al leer la planilla.
       name: 'Registros',
-      scope: 'registros_todos',
+      scope: 'registros',
       columns: [
         column('event.date'), column('occurrence.time'),
         column('project.name'), column('campaign.name'), column('campaign.season'),
         column('station.code'), column('station.region'), column('station.habitat'),
+        column('station.slope'), column('event.weather'),
         column('event.method'), column('event.recordedBy'),
         column('occurrence.commonName'), column('taxon.scientificName'),
         column('occurrence.recordType'), column('occurrence.evidenceKind'),
@@ -89,8 +94,6 @@ export const NATIVE_TEMPLATE: ExportTemplate = {
         column('occurrence.organismId'),
         column('occurrence.latitude'), column('occurrence.longitude'),
         column('occurrence.utmEast'), column('occurrence.utmNorth'),
-        column('aerial.origin'), column('aerial.destination'), column('aerial.direction'),
-        column('aerial.heightCategory'), column('aerial.heightMeters'),
         column('taxon.kingdom'), column('taxon.phylum'), column('taxon.class'),
         column('taxon.order'), column('taxon.family'), column('taxon.genus'),
         column('taxon.specificEpithet'), column('taxon.infraspecificEpithet'),
@@ -100,6 +103,53 @@ export const NATIVE_TEMPLATE: ExportTemplate = {
         column('trace.occurrenceId'), column('trace.reviewState'),
         column('trace.syncState'), column('trace.source'), column('trace.utterance'),
         column('trace.pendingFields'), column('trace.createdBy'), column('trace.createdAt'),
+      ],
+    },
+    {
+      // El trampeo tiene su propia hoja porque tiene sus propias columnas: la
+      // línea y la trampa donde cayó el animal no existen en un transecto.
+      name: 'Trampeo',
+      scope: 'trampeo',
+      columns: [
+        column('event.date'), column('occurrence.time'),
+        column('project.name'), column('campaign.season'),
+        column('station.code'), column('station.region'), column('station.habitat'),
+        column('event.method'), column('event.recordedBy'),
+        column('occurrence.site'), column('occurrence.trapNumber'),
+        column('occurrence.commonName'), column('taxon.scientificName'),
+        column('occurrence.count'), column('occurrence.sex'), column('occurrence.lifeStage'),
+        column('occurrence.condition'), column('occurrence.organismId'), column('occurrence.recapture'),
+        column('occurrence.latitude'), column('occurrence.longitude'),
+        column('occurrence.utmEast'), column('occurrence.utmNorth'),
+        column('taxon.kingdom'), column('taxon.phylum'), column('taxon.class'),
+        column('taxon.order'), column('taxon.family'), column('taxon.genus'),
+        column('taxon.specificEpithet'),
+        column('conservation.category'), column('conservation.origin'), column('conservation.endemic'),
+        column('occurrence.photos'), column('occurrence.notes'),
+        column('trace.occurrenceId'), column('trace.createdBy'), column('trace.createdAt'),
+      ],
+    },
+    {
+      // Hoja propia, como en las planillas de terreno: el tránsito aéreo tiene
+      // sus columnas y no ensucia las del resto del muestreo.
+      name: 'Tránsito aéreo',
+      scope: 'transito_aereo',
+      columns: [
+        column('event.date'), column('occurrence.time'),
+        column('project.name'), column('campaign.season'),
+        column('station.code'), column('station.region'),
+        column('event.recordedBy'), column('event.weather'),
+        column('occurrence.commonName'), column('taxon.scientificName'),
+        column('occurrence.count'), column('occurrence.sex'), column('occurrence.lifeStage'),
+        column('aerial.origin'), column('aerial.destination'), column('aerial.direction'),
+        column('aerial.heightCategory'), column('aerial.heightMeters'),
+        column('occurrence.behaviour'),
+        column('taxon.kingdom'), column('taxon.phylum'), column('taxon.class'),
+        column('taxon.order'), column('taxon.family'), column('taxon.genus'),
+        column('taxon.specificEpithet'),
+        column('conservation.category'),
+        column('occurrence.photos'), column('occurrence.notes'),
+        column('trace.occurrenceId'), column('trace.createdBy'), column('trace.createdAt'),
       ],
     },
     {

@@ -49,6 +49,8 @@ export interface ObservationDraft {
   detectionDistanceMeters: number | null;
   /** Marca o código del individuo, en trampeo y seguimiento. */
   organismId: string | null;
+  /** Trampa concreta dentro de la línea, en trampeo Sherman. */
+  trapNumber: string | null;
   recapture: boolean | null;
 
   occurrenceFixRequested: boolean;
@@ -69,7 +71,7 @@ export function emptyDraft(draftId: string, source: RecordSource = 'manual'): Ob
     sex: null, sexScope: 'sin_definir', lifeStage: null, lifeStageScope: 'sin_definir',
     organismCondition: null, behaviour: null, notes: null, aerial: null,
     identificationConfidence: 'seguro', detectionDistanceMeters: null,
-    organismId: null, recapture: null,
+    organismId: null, trapNumber: null, recapture: null,
     occurrenceFixRequested: false, mediaIds: [], source, verbatimUtterance: null,
     acknowledgedPending: [],
   };

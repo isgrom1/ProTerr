@@ -129,6 +129,19 @@ export function Terreno() {
             : s.gpsError ?? 'Buscando GPS…'}
           {station?.utmEast ? ` · Estación ${station.stationCode} en ${Math.round(station.utmEast)} / ${Math.round(station.utmNorth ?? 0)}` : ''}
         </p>
+        {/* La cabecera que antes se escribía a mano en una nota: hora de
+            inicio, ladera y clima. Se ve aquí para saber que quedó guardada. */}
+        {(s.activeEvent?.startedAt || s.activeEvent?.weather || station?.slopeAspect) && (
+          <p className="muted" style={{ margin: '6px 0 0', fontSize: 12 }}>
+            {[
+              s.activeEvent?.startedAt
+                ? `Inicio ${new Date(s.activeEvent.startedAt).toTimeString().slice(0, 5)}`
+                : null,
+              station?.slopeAspect ? `Ladera ${station.slopeAspect}` : null,
+              s.activeEvent?.weather,
+            ].filter(Boolean).join(' · ')}
+          </p>
+        )}
       </section>
 
       {/* El recorrido es OPCIONAL y explícito. En el uso normal se dice

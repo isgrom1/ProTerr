@@ -14,7 +14,10 @@ import type {
   AerialTransit, AttributeScope, IdentificationConfidence, LifeStage, MethodCode,
   OrganismCondition, RecordType, Sex,
 } from '../domain/types';
-import { INDIRECT_RECORD_TYPES, DEFAULT_LEXICONS, type LexEntry, type Lexicons } from './lexicon';
+import {
+  INDIRECT_RECORD_TYPES, DEFAULT_LEXICONS, SLOPE_TERMS, SLOPE_TRIGGERS,
+  type LexEntry, type Lexicons,
+} from './lexicon';
 import { readNumber } from './numbers';
 import type { TaxonIndex, TaxonMatch } from './taxonIndex';
 import { fold } from './text';
@@ -43,6 +46,8 @@ export interface ParsedObservation {
   identificationConfidence: IdentificationConfidence;
   /** Distancia perpendicular de detección, en metros. */
   detectionDistanceMeters: number | null;
+  /** Trampa concreta donde cayó el animal, en trampeo Sherman ("trampa 11"). */
+  trapNumber: string | null;
   notes: string | null;
   confidence: number;
   /** Fragmento original que originó esta observación. */
@@ -51,12 +56,30 @@ export interface ParsedObservation {
   unparsed: string[];
 }
 
+/**
+ * Cabecera del punto: lo que el técnico anotaba a mano al llegar
+ * ("EMF40, hora de inicio, inclinación plano-este-oeste, soleado").
+ * No es un registro de fauna, es el encabezado del muestreo.
+ */
+export interface ParsedHeader {
+  /** Dijo "hora de inicio": está abriendo el punto, no registrando una especie. */
+  opensPoint: boolean;
+  weather: string | null;
+  slopeAspect: string | null;
+}
+
 export interface ParsedUtterance {
   raw: string;
   /** Contexto común a todas las observaciones (estación y metodología dichas una vez). */
   stationCode: string | null;
   method: MethodCode | null;
   observations: ParsedObservation[];
+  header: ParsedHeader;
+  /**
+   * Línea de trampeo, punto de playback o cámara nombrados en la frase
+   * ("la línea asociada al punto 40"). Es un sitio DENTRO de la estación.
+   */
+  siteName: string | null;
   /** El usuario declaró explícitamente que no hubo detecciones en la estación. */
   noDetections: boolean;
   warnings: string[];
@@ -75,6 +98,21 @@ const DISTANCE_TRIGGERS = ['distancia', 'a'];
 const NO_DETECTION_RE =
   /\b(sin registros?|sin detecciones?|no (se )?(registro|registre|detecto|detecte|hubo|vi|observe)( nada| registros?| especies?)?|nada que registrar|estacion vacia|cero registros?)\b/;
 const ORIGIN_TRIGGERS = ['desde', 'proveniente', 'viene', 'origen'];
+const TRAP_TRIGGERS = ['trampa', 'trampas'];
+const LINE_TRIGGERS = ['linea', 'lineas', 'transecta'];
+/** Palabras de relleno entre "línea" y su identificador ("la línea asociada al punto 40"). */
+const SITE_FILLERS = [
+  'asociada', 'asociado', 'asociadas', 'asociados', 'correspondiente', 'numero', 'n',
+  'a', 'al', 'la', 'el', 'de', 'del', 'los', 'las', 'punto', 'pto', 'estacion',
+];
+/** Formas de decir "estoy abriendo este punto". */
+const POINT_START_LEXICON: Array<LexEntry<true>> = [
+  { phrases: [
+    'hora de inicio', 'hora inicio', 'inicio de punto', 'inicio del punto',
+    'inicio de estacion', 'inicio de muestreo', 'abro el punto', 'abrir punto',
+    'abriendo punto', 'partida del punto',
+  ], value: true },
+];
 const DEST_TRIGGERS = ['hacia', 'rumbo', 'hasta', 'destino', 'direccion'];
 
 /**
@@ -98,7 +136,7 @@ function emptyObservation(verbatim: string): ParsedObservation {
     recordType: null, recordTypeInferred: false, evidenceKind: null, individualCount: null, countInferred: false,
     sex: null, sexScope: 'sin_definir', lifeStage: null, lifeStageScope: 'sin_definir',
     organismCondition: null, behaviour: null, aerial: null,
-    identificationConfidence: 'seguro', detectionDistanceMeters: null, notes: null,
+    identificationConfidence: 'seguro', detectionDistanceMeters: null, trapNumber: null, notes: null,
     confidence: 0, verbatim, unparsed: [],
   };
 }
@@ -131,7 +169,13 @@ function normalizeStationCode(code: string): string {
 export function parseUtterance(raw: string, ctx: ParseContext): ParsedUtterance {
   const lex = ctx.lexicons ?? DEFAULT_LEXICONS;
   const stationSet = new Map((ctx.stationCodes ?? []).map((c) => [normalizeStationCode(c), c]));
-  const result: ParsedUtterance = { raw, stationCode: null, method: null, observations: [], noDetections: false, warnings: [] };
+  const reserved = reservedWords(lex);
+  const result: ParsedUtterance = {
+    raw, stationCode: null, method: null, observations: [],
+    header: { opensPoint: false, weather: null, slopeAspect: null },
+    siteName: null,
+    noDetections: false, warnings: [],
+  };
 
   // "Sin registros en EMF09" es un dato de ausencia, no una frase vacía.
   if (NO_DETECTION_RE.test(fold(raw))) result.noDetections = true;
@@ -143,7 +187,7 @@ export function parseUtterance(raw: string, ctx: ParseContext): ParsedUtterance 
     // ¿Este fragmento abre una observación nueva? Sólo si nombra un taxón.
     // Si no nombra ninguna, es continuación de la anterior; y si todavía no
     // hay ninguna, es contexto común (estación, metodología dichas al inicio).
-    const taxonHit = findTaxon(tokens, ctx.taxonIndex);
+    const taxonHit = findTaxon(tokens, ctx.taxonIndex, reserved);
     const previous = result.observations[result.observations.length - 1] ?? null;
     const target = taxonHit ? null : previous;
 
@@ -177,22 +221,51 @@ export function parseUtterance(raw: string, ctx: ParseContext): ParsedUtterance 
   }
 
   for (const obs of result.observations) finalize(obs);
-  if (!result.observations.length && !result.noDetections) {
+  // Abrir el punto no es un registro fallido: si la frase era la cabecera,
+  // reclamar una especie que nadie nombró sólo estorba.
+  const isHeaderOnly = result.header.opensPoint
+    || result.header.weather !== null || result.header.slopeAspect !== null;
+  if (!result.observations.length && !result.noDetections && !isHeaderOnly) {
     result.warnings.push('No se reconoció ninguna especie en el dictado.');
   }
   return result;
 }
 
 /**
- * Tres pasadas sobre todo el fragmento, en orden de certeza: nombre exacto,
- * nombre genérico ("golondrina" -> las golondrinas del catálogo) y por último
- * corrección ortográfica. Si no fuera en ese orden, "dos tiuques" podría
- * resolverse por parecido antes de llegar a "tiuque", que está bien escrito.
+ * Palabras de una sola pieza que el dictado ya usa para otra cosa ("posado",
+ * "vocalizando", "nublado"). Si una de ellas aparece también dentro del nombre
+ * de una especie, no puede servir para nombrarla: se perdería el atributo.
  */
-function findTaxon(tokens: string[], index: TaxonIndex): { start: number; match: TaxonMatch } | null {
+const reservedCache = new WeakMap<Lexicons, Set<string>>();
+function reservedWords(lex: Lexicons): Set<string> {
+  const cached = reservedCache.get(lex);
+  if (cached) return cached;
+  const out = new Set<string>(FILLERS);
+  for (const entries of Object.values(lex) as Array<Array<LexEntry<unknown>>>) {
+    for (const entry of entries) {
+      for (const phrase of entry.phrases) if (!phrase.includes(' ')) out.add(phrase);
+    }
+  }
+  for (const word of [...SLOPE_TRIGGERS, ...Object.keys(SLOPE_TERMS), ...HEIGHT_TRIGGERS,
+    ...ORIGIN_TRIGGERS, ...DEST_TRIGGERS]) out.add(word);
+  reservedCache.set(lex, out);
+  return out;
+}
+
+/**
+ * Cuatro pasadas sobre todo el fragmento, en orden de certeza: nombre exacto,
+ * nombre genérico ("golondrina" -> las golondrinas del catálogo), palabra
+ * distintiva ("olivaceo" -> Ratón oliváceo) y por último corrección
+ * ortográfica. Si no fuera en ese orden, "dos tiuques" podría resolverse por
+ * parecido antes de llegar a "tiuque", que está bien escrito.
+ */
+function findTaxon(
+  tokens: string[], index: TaxonIndex, reserved: Set<string>,
+): { start: number; match: TaxonMatch } | null {
   const passes = [
     (i: number) => index.matchExactAt(tokens, i),
     (i: number) => index.matchPrefixAt(tokens, i),
+    (i: number) => index.matchWordAt(tokens, i, reserved),
     (i: number) => index.matchFuzzyAt(tokens, i),
   ];
   for (const pass of passes) {
@@ -263,6 +336,36 @@ function applyTokens(tokens: string[], obs: ParsedObservation, utt: ParsedUttera
         }
         continue;
       }
+    }
+
+    // --- cabecera del punto: apertura, ladera y clima ---
+    const opens = matchLexicon(POINT_START_LEXICON, tokens, i);
+    if (opens) { utt.header.opensPoint = true; i += opens.length; continue; }
+
+    // La ladera se dicta encadenada ("plano-este-oeste"), así que se lee antes
+    // que el rumbo: si no, "este" y "oeste" se irían al vuelo del ave.
+    if (SLOPE_TRIGGERS.includes(t)) {
+      const slope = readSlope(tokens, i);
+      if (slope) { utt.header.slopeAspect = slope.value; i = slope.next; continue; }
+      i++;
+      continue;
+    }
+
+    const weather = matchLexicon(lex.weather, tokens, i);
+    if (weather) { utt.header.weather = weather.value; i += weather.length; continue; }
+
+    // --- trampeo: la trampa concreta y la línea a la que pertenece ---
+    // Si lo que sigue no es un identificador, no se consume nada: así
+    // "trampa sherman" sigue leyéndose como metodología más abajo.
+    if (TRAP_TRIGGERS.includes(t)) {
+      const after = skipFiller(tokens, i + 1, SITE_FILLERS);
+      const code = readSiteCode(tokens, after);
+      if (code) { obs.trapNumber = code.value; i = after + code.length; continue; }
+    }
+    if (LINE_TRIGGERS.includes(t)) {
+      const after = skipFiller(tokens, i + 1, SITE_FILLERS);
+      const code = readSiteCode(tokens, after);
+      if (code) { utt.siteName = `Línea ${code.value}`; i = after + code.length; continue; }
     }
 
     if (ORIGIN_TRIGGERS.includes(t)) { pendingRole = 'origin'; i++; continue; }
@@ -364,6 +467,42 @@ function readStation(
     return { code: (tokens[i] + tokens[i + 1]).toUpperCase(), length: 2, known: false };
   }
   return null;
+}
+
+/**
+ * Identificador de una trampa o de una línea: un número ("once", "11") o un
+ * código corto ("a3", "l2"). No acepta palabras sueltas: "trampa sherman" no
+ * nombra ninguna trampa.
+ */
+function readSiteCode(tokens: string[], at: number): { value: string; length: number } | null {
+  const num = readNumber(tokens, at);
+  if (num) return { value: String(num.value), length: num.length };
+  const token = tokens[at];
+  if (token && /^[a-z]{1,3}\d{1,3}$/.test(token)) return { value: token.toUpperCase(), length: 1 };
+  return null;
+}
+
+/**
+ * Lee la ladera de exposición a partir de su palabra guía. Encadena los
+ * términos que vengan seguidos, tal como se dicen: "inclinación plano este
+ * oeste" -> "Plano-Este-Oeste". Se detiene en la primera palabra que no
+ * describe la ladera, para no tragarse el resto de la frase.
+ */
+function readSlope(tokens: string[], at: number): { value: string; next: number } | null {
+  const parts: string[] = [];
+  if (tokens[at] === 'ladera') parts.push('Ladera');
+  let i = skipFiller(tokens, at + 1, ['de', 'del', 'la', 'el', 'en', 'hacia']);
+  while (i < tokens.length) {
+    const term = SLOPE_TERMS[tokens[i]];
+    if (!term) break;
+    if (!parts.includes(term)) parts.push(term);
+    i++;
+    // "plano - este - oeste" llega sin guiones tras plegar; los conectores
+    // intermedios se saltan para que la cadena no se corte.
+    i = skipFiller(tokens, i, ['y', 'e', 'a']);
+  }
+  if (!parts.length) return null;
+  return { value: parts.join('-'), next: i };
 }
 
 /** Reglas que sólo pueden aplicarse cuando ya se leyó toda la observación. */

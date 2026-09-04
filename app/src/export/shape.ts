@@ -6,7 +6,7 @@
  * catálogo corrige todas las filas históricas, en vez de dejar #N/A congelado.
  */
 import type {
-  Campaign, MeasurementOrFact, Occurrence, Project, SamplingEvent, Station, Taxon,
+  Campaign, MeasurementOrFact, Occurrence, Project, SamplingEvent, Station, StationSite, Taxon,
 } from '../domain/types';
 import { toUtm } from '../geo/utm';
 
@@ -14,6 +14,8 @@ export interface FlatRecord {
   occurrence: Occurrence;
   event: SamplingEvent;
   station: Station | null;
+  /** Punto de playback, cámara o línea de trampeo dentro de la estación. */
+  site: StationSite | null;
   project: Project | null;
   campaign: Campaign | null;
   taxon: Taxon | null;
@@ -49,6 +51,7 @@ export function flatten(
       occurrence: occ,
       event,
       station,
+      site: station?.sites.find((s) => s.id === event.siteId) ?? null,
       project: catalogs.projects.get(event.projectId) ?? null,
       campaign: catalogs.campaigns.get(event.campaignId) ?? null,
       taxon: occ.taxonId ? catalogs.taxa.get(occ.taxonId) ?? null : null,

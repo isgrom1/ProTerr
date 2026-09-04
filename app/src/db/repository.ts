@@ -299,6 +299,7 @@ export async function commitDraft(
     identificationConfidence: draft.identificationConfidence ?? 'seguro',
     detectionDistanceMeters: draft.detectionDistanceMeters ?? null,
     organismId: draft.organismId ?? null,
+    trapNumber: draft.trapNumber ?? null,
     recapture: draft.recapture ?? null,
     reviewState: 'terreno',
     reviewedBy: null,

@@ -15,7 +15,7 @@ export type RequirableField =
   | 'organismCondition' | 'behaviour' | 'notes' | 'photos'
   | 'occurrenceCoordinates' | 'flightDirection' | 'flightHeight' | 'flightOrigin'
   | 'flightDestination' | 'playbackResponse'
-  | 'effort' | 'conditions' | 'detectionDistance' | 'organismId';
+  | 'effort' | 'conditions' | 'detectionDistance' | 'organismId' | 'trapNumber';
 
 export type Requirement = 'required' | 'recommended' | 'optional' | 'hidden';
 
@@ -71,6 +71,8 @@ export const DEFAULT_PROFILE: RequirementProfile = {
     conditions: 'optional',
     detectionDistance: 'hidden',
     organismId: 'hidden',
+    // Sólo existe en trampeo: en un transecto no hay ninguna trampa que numerar.
+    trapNumber: 'hidden',
     // Campos de tránsito aéreo: ocultos salvo que la metodología los active.
     flightDirection: 'hidden',
     flightHeight: 'hidden',
@@ -100,6 +102,7 @@ export const DEFAULT_PROFILE: RequirementProfile = {
     camara_trampa: {
       taxon: 'required', eventDate: 'required', eventTime: 'required',
       individualCount: 'required', photos: 'required', recordType: 'recommended',
+      trapNumber: 'optional',
       // La foto permite describir conducta y edad, igual que un avistamiento.
       behaviour: 'recommended', lifeStage: 'recommended',
     },
@@ -108,6 +111,8 @@ export const DEFAULT_PROFILE: RequirementProfile = {
       lifeStage: 'recommended', occurrenceCoordinates: 'recommended',
       // En trampeo el individuo se marca: sin código no hay recaptura.
       organismId: 'recommended',
+      // Sin la trampa, el registro pierde el detalle que hace útil la línea.
+      trapNumber: 'recommended',
     },
     punto_conteo: {
       taxon: 'required', individualCount: 'required', recordType: 'required',

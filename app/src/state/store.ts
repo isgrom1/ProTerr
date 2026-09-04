@@ -18,13 +18,13 @@ import { analyzeQuality, type QualitySummary } from '../quality/report';
 import { emptyDraft, type ObservationDraft } from '../domain/draft';
 import type {
   Campaign, EnvironmentalConditions, GeoFix, MethodCode, Occurrence, Project,
-  ReviewState, SamplingEvent, Station, Taxon,
+  ReviewState, SamplingEvent, Station, StationSite, Taxon,
 } from '../domain/types';
 import { NATIVE_TEMPLATE, type ExportTemplate } from '../export/template';
 import { suggestStations, type StationSuggestion } from '../geo/stations';
 import { toUtm } from '../geo/utm';
 import { parseCommand, type VoiceCommand } from '../nlp/commands';
-import { parseUtterance, type ParsedObservation } from '../nlp/parser';
+import { parseUtterance, type ParsedHeader, type ParsedObservation } from '../nlp/parser';
 import { TaxonIndex } from '../nlp/taxonIndex';
 import { syncOutbox, syncStatus, type SyncStatus, type SyncTransport } from '../sync/engine';
 import { validateDraft, whatIsMissing, type ValidationResult } from '../validation/engine';
@@ -110,6 +110,8 @@ interface State {
   runSync(transport: SyncTransport): Promise<void>;
 
   /** Cierra el muestreo abierto y congela su esfuerzo. */
+  /** Abre o completa la cabecera del punto dictada al llegar. */
+  applyPointHeader(header: ParsedHeader): Promise<void>;
   closeEffort(extra?: { distanceMeters?: number; trapCount?: number; trapNights?: number; noDetections?: boolean }): Promise<void>;
   /** Recorrido explícito: nada se graba sin que el usuario lo pida. */
   beginTrack(): Promise<void>;
@@ -174,6 +176,7 @@ function draftFrom(
     aerial: obs.aerial,
     identificationConfidence: obs.identificationConfidence,
     detectionDistanceMeters: obs.detectionDistanceMeters,
+    trapNumber: obs.trapNumber,
     verbatimUtterance: utterance,
   };
 }
@@ -305,6 +308,23 @@ export const useStore = create<State>((set, get) => ({
       }, text));
 
     for (const warning of parsed.warnings) get().notify(warning, 'warn');
+
+    // La línea de trampeo (o el punto de playback) es un sitio DENTRO de la
+    // estación: se resuelve contra los que ya tiene y, si es nuevo, se agrega.
+    // Perderlo obligaría a anotar a mano dónde cayó cada animal.
+    if (parsed.siteName && effectiveStation) {
+      const siteId = await ensureSite(set, get, effectiveStation, parsed.siteName, effectiveMethod);
+      if (siteId) for (const d of drafts) d.siteId = siteId;
+    }
+
+    // La cabecera puede venir sola ("EMF40, hora de inicio, soleado") o pegada
+    // a los registros ("EMF40 soleado, un macho de loica posado").
+    const { header } = parsed;
+    if (header.opensPoint || header.weather || header.slopeAspect) {
+      await get().applyPointHeader(header);
+      if (header.weather) for (const d of drafts) d.weather = header.weather;
+      if (!drafts.length) return null;
+    }
 
     if (parsed.noDetections && !drafts.length) {
       await get().recordNoDetections();
@@ -546,6 +566,43 @@ export const useStore = create<State>((set, get) => ({
     await refreshActiveEvent(set, get);
   },
 
+  /**
+   * Cabecera del punto: lo que el técnico anotaba a mano al llegar. La hora de
+   * inicio y el clima son del muestreo; la ladera describe el lugar, así que
+   * queda en la estación y sirve para todas las campañas siguientes.
+   */
+  async applyPointHeader(header) {
+    const event = await ensureEvent(set, get);
+    if (!event) return;
+    const { session } = get();
+    const hechos: string[] = [];
+
+    const patch: Partial<SamplingEvent> = {};
+    if (header.opensPoint && !event.startedAt) {
+      patch.startedAt = new Date().toISOString();
+      hechos.push(`inicio ${new Date().toTimeString().slice(0, 5)}`);
+    }
+    if (header.weather && header.weather !== event.weather) {
+      patch.weather = header.weather;
+      hechos.push(header.weather.toLowerCase());
+    }
+    if (Object.keys(patch).length) {
+      await applyEventPatch(event.id, patch, session, 'Cabecera del punto');
+    }
+
+    if (header.slopeAspect) {
+      const station = get().stations.find((st) => st.id === event.stationId);
+      if (station && station.slopeAspect !== header.slopeAspect) {
+        await db.stations.put({ ...station, slopeAspect: header.slopeAspect });
+        set({ stations: await db.stations.toArray() });
+        hechos.push(`ladera ${header.slopeAspect.toLowerCase()}`);
+      }
+    }
+
+    await refreshActiveEvent(set, get);
+    if (hechos.length) get().notify(`Cabecera del punto: ${hechos.join(', ')}.`);
+  },
+
   async recordNoDetections() {
     const { projectId, campaignId, stationId, method, session, projects, fix } = get();
     const project = projects.find((p) => p.id === projectId);
@@ -676,6 +733,36 @@ async function ensureEvent(
   );
   await refreshActiveEvent(set, get);
   return event;
+}
+
+/**
+ * Devuelve el sitio de la estación con ese nombre, creándolo si no existe.
+ * Los sitios son las líneas de trampeo, los puntos de playback y las cámaras:
+ * viven dentro de la estación porque así se nombran en terreno ("la línea
+ * asociada al punto 40").
+ */
+async function ensureSite(
+  set: (partial: Partial<State>) => void, get: () => State,
+  stationId: string, name: string, method: MethodCode | null,
+): Promise<string | null> {
+  const station = get().stations.find((st) => st.id === stationId);
+  if (!station) return null;
+  const wanted = name.trim().toLowerCase();
+  const existing = station.sites.find((site) => site.name.trim().toLowerCase() === wanted);
+  if (existing) return existing.id;
+
+  const kind: StationSite['kind'] =
+    method === 'playback_aves' || method === 'playback_anfibios' || method === 'camara_trampa'
+      ? method
+      : 'trampa_sherman';
+  const site: StationSite = {
+    id: `site_${stationId}_${wanted.replace(/[^a-z0-9]+/g, '-')}`,
+    kind, name: name.trim(), label: null, installedOn: null,
+    utmEast: null, utmNorth: null, utmEndEast: null, utmEndNorth: null,
+  };
+  await db.stations.put({ ...station, sites: [...station.sites, site] });
+  set({ stations: await db.stations.toArray() });
+  return site.id;
 }
 
 /**

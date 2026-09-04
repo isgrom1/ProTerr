@@ -103,6 +103,36 @@ export const DIRECTION_LEXICON: Array<LexEntry<string>> = [
 ];
 
 /**
+ * Clima tal como se dice al abrir el punto ("soleado", "nublado", "con
+ * viento"). El valor es el que espera la planilla; las frases, las del habla.
+ */
+export const WEATHER_LEXICON: Array<LexEntry<string>> = [
+  { phrases: ['despejado', 'cielo despejado', 'soleado', 'sol', 'con sol'], value: 'Despejado' },
+  { phrases: ['parcialmente nublado', 'nubosidad parcial', 'semi nublado', 'algo nublado'], value: 'Parcialmente nublado' },
+  { phrases: ['nublado', 'cubierto', 'cielo cubierto', 'nuboso'], value: 'Nublado' },
+  { phrases: ['neblina', 'niebla', 'camanchaca', 'bruma'], value: 'Neblina' },
+  { phrases: ['llovizna', 'garua', 'chubasco'], value: 'Llovizna' },
+  { phrases: ['lluvia', 'lloviendo', 'con lluvia'], value: 'Lluvia' },
+  { phrases: ['viento', 'ventoso', 'con viento'], value: 'Viento' },
+];
+
+/**
+ * Términos que describen la ladera de exposición del punto. No son un léxico
+ * de valor único: se encadenan tal como se dictan ("plano-este-oeste"), así
+ * que aquí sólo se declara qué palabras pueden formar parte de la cadena.
+ */
+export const SLOPE_TERMS: Record<string, string> = {
+  plano: 'Plano', llano: 'Plano', fondo: 'Fondo de quebrada', quebrada: 'Quebrada',
+  cima: 'Cima', cumbre: 'Cima', ladera: 'Ladera', media: 'Media ladera',
+  norte: 'Norte', sur: 'Sur', este: 'Este', oeste: 'Oeste',
+  oriente: 'Este', poniente: 'Oeste',
+  noreste: 'Noreste', noroeste: 'Noroeste', sureste: 'Sureste', suroeste: 'Suroeste',
+};
+
+/** Palabras que anuncian que viene la ladera de exposición. */
+export const SLOPE_TRIGGERS = ['inclinacion', 'exposicion', 'ladera', 'pendiente', 'aspecto'];
+
+/**
  * Metodologías y sus alias hablados. "LDB fauna diaria" es el nombre de la
  * actividad en terreno; se mapea a la metodología que la planilla reconoce.
  */
@@ -135,6 +165,7 @@ export type Lexicons = {
   behaviour: typeof BEHAVIOUR_LEXICON;
   direction: typeof DIRECTION_LEXICON;
   method: typeof METHOD_LEXICON;
+  weather: typeof WEATHER_LEXICON;
 };
 
 export const DEFAULT_LEXICONS: Lexicons = {
@@ -146,6 +177,7 @@ export const DEFAULT_LEXICONS: Lexicons = {
   behaviour: BEHAVIOUR_LEXICON,
   direction: DIRECTION_LEXICON,
   method: METHOD_LEXICON,
+  weather: WEATHER_LEXICON,
 };
 
 /** Permite que un proyecto añada jerga local sin recompilar el parser. */

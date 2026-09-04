@@ -356,6 +356,11 @@ export interface Occurrence extends Auditable {
   /** Marca o código del individuo (recapturas en trampeo, seguimiento). */
   organismId?: string | null;
   recapture?: boolean | null;
+  /**
+   * Número de trampa dentro de la línea, en trampeo Sherman. La línea es el
+   * `siteId`; esto es la trampa concreta donde cayó el animal.
+   */
+  trapNumber?: string | null;
 
   // --- Flujo de revisión en gabinete ---
   reviewState?: ReviewState;

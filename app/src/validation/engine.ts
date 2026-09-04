@@ -96,6 +96,7 @@ function valueOf(draft: ObservationDraft, field: RequirableField): unknown {
     case 'method': return draft.method;
     case 'recordedBy': return draft.recordedBy;
     case 'weather': return draft.weather;
+    case 'trapNumber': return draft.trapNumber;
     case 'taxon': return draft.taxonId;
     case 'recordType': return draft.recordTypeInferred ? null : draft.recordType;
     case 'individualCount': return draft.individualCount;
@@ -123,7 +124,7 @@ function valueOf(draft: ObservationDraft, field: RequirableField): unknown {
 
 const LABELS: Record<RequirableField, string> = {
   eventDate: 'Fecha', eventTime: 'Hora', station: 'Estación', method: 'Metodología',
-  recordedBy: 'Observador', weather: 'Clima', taxon: 'Especie',
+  recordedBy: 'Observador', weather: 'Clima', taxon: 'Especie', trapNumber: 'N° de trampa',
   recordType: 'Tipo de registro', individualCount: 'Abundancia', sex: 'Sexo',
   lifeStage: 'Estado de desarrollo', organismCondition: 'Estado del organismo',
   behaviour: 'Comportamiento', notes: 'Observaciones', photos: 'Fotografías',

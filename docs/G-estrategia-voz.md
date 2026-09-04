@@ -63,10 +63,16 @@ reemplazable.
 dos», «mil doscientos». Los artículos «un/una» cuentan como 1.
 
 **Taxones**: nombre común, nombre científico, abreviatura del género
-(`S. rubecula`), plurales y errores menores de escritura. La corrección
-ortográfica es una **segunda pasada**: sólo se aplica si ninguna posición del
-texto dio coincidencia exacta, para que «dos tiuques» no se resuelva por
-parecido antes de llegar a «tiuque», que está bien escrito.
+(`S. rubecula`), plurales, nombre genérico («golondrina»), **palabra
+distintiva** («olivaceo» → Ratón oliváceo, «culpeo» → Zorro culpeo) y errores
+menores de escritura. Son cuatro pasadas en orden de certeza —exacta, genérica,
+palabra distintiva, ortografía— sobre todo el fragmento: la corrección
+ortográfica sólo se aplica si ninguna de las anteriores dio nada, para que «dos
+tiuques» no se resuelva por parecido antes de llegar a «tiuque», que está bien
+escrito. La palabra distintiva exige al menos 5 letras, apuntar a 3 especies o
+menos, y **no significar otra cosa en el dictado**: la lista de palabras
+reservadas se arma sola desde los léxicos, así que «posado» o «nublado» nunca
+pueden nombrar una especie.
 
 **Ambigüedad**: un nombre común que el catálogo comparte entre varias especies
 devuelve todos sus candidatos. La app pregunta; **nunca elige el primero**, que es justo lo que hacía
@@ -79,6 +85,19 @@ comportamiento, dirección cardinal, metodología (incluido «LDB fauna diaria»
 
 **Estaciones**: código conocido, o el patrón letras+dígitos aunque el dictado lo
 separe («EMF 10» → `EMF10`).
+
+**Cabecera del punto**: la nota que antes se escribía a mano al llegar.
+«EMF40, hora de inicio, inclinación plano-este-oeste, soleado» abre el muestreo,
+guarda el clima en el evento y la ladera en la estación, y **no reclama ninguna
+especie**, porque no se estaba registrando ninguna. La ladera se lee antes que
+el rumbo justamente para que «plano-este-oeste» no se confunda con la dirección
+de vuelo de un ave.
+
+**Trampeo**: «sherman de PMF34, olivaceo en trampa 11 de la línea asociada al
+punto 40» deja la trampa en el registro (`trapNumber`) y la línea como sitio
+dentro de la estación, creándola si no existía. Si lo que sigue a «trampa» no es
+un identificador, no se consume nada: «trampa sherman» sigue siendo la
+metodología.
 
 ## G.5 Detalles que salieron de probar con frases reales
 
@@ -95,9 +114,13 @@ separe («EMF 10» → `EMF10`).
   el detector de duplicados nunca los confunde entre sí.
 - **«muerto» es estado del organismo, no evidencia indirecta**: un cadáver es un
   individuo observado.
+- **Cada metodología pide lo suyo.** El origen y la altura de vuelo no aparecen
+  en un transecto, y la trampa y la línea no aparecen fuera del trampeo: ni en
+  la tarjeta de confirmación, ni en la validación, ni en la planilla de salida.
 
 ## G.6 Verificación
 
-`app/src/nlp/parser.test.ts` (23 pruebas) cubre los 6 casos del brief, las 8
-frases libres del §2, el caso de múltiples observaciones, y las regresiones de
-§G.5. `app/src/nlp/commands.test.ts` (12 pruebas) cubre los comandos de voz.
+`app/src/nlp/parser.test.ts` (48 pruebas) cubre los 6 casos del brief, las 8
+frases libres del §2, el caso de múltiples observaciones, la cabecera del punto,
+el trampeo Sherman, la palabra distintiva y las regresiones de §G.5.
+`app/src/nlp/commands.test.ts` (28 pruebas) cubre los comandos de voz.
