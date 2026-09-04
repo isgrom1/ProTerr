@@ -276,9 +276,19 @@ describe('nombres genéricos de terreno', () => {
   });
 
   it('cuando el genérico deja una sola candidata, la resuelve sin preguntar', () => {
-    const [o] = parse('un cometocino').observations;
-    expect(nameOf(o.taxonIds)).toBe('Cometocino de Gay');
+    const [o] = parse('un huairavo').observations;
+    expect(nameOf(o.taxonIds)).toBe('Huairavo');
     expect(o.taxonNeedsDisambiguation).toBe(false);
+  });
+
+  it('un catálogo más grande convierte un genérico en pregunta, y está bien', () => {
+    // Con una sola especie, "cometocino" se resolvía solo. Al entrar el
+    // cometocino patagónico deja de ser suficiente: la app pregunta en vez de
+    // quedarse con la que estaba primero.
+    const [o] = parse('un cometocino').observations;
+    expect(o.taxonNeedsDisambiguation).toBe(true);
+    expect(o.taxonIds.map((id) => index.get(id)!.commonName).sort())
+      .toEqual(['Cometocino de Gay', 'Cometocino patagónico']);
   });
 
   it('un nombre exacto le gana al genérico: "loica" no se vuelve ambiguo', () => {
@@ -375,5 +385,31 @@ describe('tránsito aéreo nocturno (MTAN)', () => {
       .toBe('transito_aereo_nocturno');
     expect(parse('MTAN en EMF09, dos garumas').method).toBe('transito_aereo_nocturno');
     expect(parse('transito aereo en EMF09, dos garumas').method).toBe('transito_aereo');
+  });
+});
+
+describe('catálogo de arranque', () => {
+  // Nombres que aparecieron en planillas reales de otras consultoras. No es
+  // una lista exhaustiva —cada organización carga la suya— pero lo corriente
+  // en línea base tiene que estar desde el primer día.
+  const CORRIENTES = [
+    'Chercán', 'Diuca', 'Loica', 'Tenca', 'Cachudito', 'Trile', 'Tijeral',
+    'Carpinterito', 'Rara', 'Gaviota garuma', 'Vari', 'Zarapito', 'Pidén',
+  ];
+
+  for (const nombre of CORRIENTES) {
+    it(`reconoce "${nombre}"`, () => {
+      const r = parse(`EMF09, un ${nombre.toLowerCase()}`);
+      expect(r.observations).toHaveLength(1);
+      expect(r.observations[0].taxonIds.length).toBeGreaterThan(0);
+    });
+  }
+
+  it('un sinónimo lleva a la misma especie, no a una ambigüedad', () => {
+    // "Zorzal" y "Zorzal patagónico" son el mismo Turdus falcklandii.
+    const uno = parse('EMF09, un zorzal');
+    const otro = parse('EMF09, un zorzal patagonico');
+    expect(otro.observations[0].taxonNeedsDisambiguation).toBe(false);
+    expect(otro.observations[0].taxonIds).toEqual(uno.observations[0].taxonIds);
   });
 });

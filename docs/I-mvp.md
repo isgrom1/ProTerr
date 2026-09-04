@@ -2,7 +2,7 @@
 
 ## I.1 Qué está construido y funcionando
 
-El MVP **está implementado**, no propuesto. 240 pruebas verdes, `tsc` limpio,
+El MVP **está implementado**, no propuesto. 297 pruebas verdes, `tsc` limpio,
 build de producción y recorrido verificado en navegador con los archivos
 exportados releídos y validados.
 
@@ -83,7 +83,7 @@ exportados releídos y validados.
 ```bash
 cd app
 npm install
-npm test          # 240 pruebas
+npm test          # 297 pruebas
 npm run dev       # http://localhost:5173
 ```
 

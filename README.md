@@ -44,7 +44,7 @@ organización**. Todo lo que trae fue escrito para este proyecto:
 
 | Qué | De dónde sale |
 |---|---|
-| Catálogo de especies de arranque | `data/catalogo/catalogo-base-chile.csv`, escrito para este proyecto. Nombre común, nombre científico y clasificación son hechos científicos de dominio público. ~156 especies chilenas de registro corriente: es un punto de partida, no una lista autoritativa. |
+| Catálogo de especies de arranque | `data/catalogo/catalogo-base-chile.csv`, escrito para este proyecto. Nombre común, nombre científico y clasificación son hechos científicos de dominio público. 249 especies chilenas de registro corriente, con sus sinónimos de terreno: es un punto de partida, no una lista autoritativa. |
 | Estaciones | `data/catalogo/estaciones-demo.csv`, **ficticias**. No corresponden a ningún proyecto ni ubicación real. |
 | Formato de salida | `NATIVE_TEMPLATE`, propio. El de cada consultora lo aporta esa consultora subiendo su formulario. |
 | Categorías de conservación | Se cargan desde la lista oficial del organismo competente. El archivo que se entrega es un **ejemplo** marcado como tal, que hay que reemplazar. |
@@ -52,18 +52,73 @@ organización**. Todo lo que trae fue escrito para este proyecto:
 Cada organización carga sus propios catálogos y su propio formulario. Ver
 [K. Plantillas por consultora](docs/K-plantillas.md).
 
-## Cómo ejecutarlo
+## Cómo abrirla por primera vez
+
+ProTerr no se instala desde una tienda de aplicaciones: es una **PWA**, una página web que el
+teléfono guarda y ejecuta sin conexión. Para verla hay que levantarla una vez.
+
+**1. Instalar Node.js** (una sola vez), desde <https://nodejs.org> — la versión LTS. Sirve
+cualquiera de la 20 en adelante. Para comprobar que quedó:
 
 ```bash
-cd app
-npm install
-npm test        # 240 pruebas
-npm run dev     # http://localhost:5173
-npm run build   # PWA instalable en dist/
+node --version
 ```
+
+**2. Bajar el proyecto y levantarlo.** En la Terminal (macOS/Linux) o en PowerShell (Windows):
+
+```bash
+git clone https://github.com/isgrom1/ProTerr.git
+cd ProTerr/app
+npm install          # sólo la primera vez, baja las dependencias
+npm run dev
+```
+
+Va a imprimir algo como `Local: http://localhost:5173/`. **Ese enlace se abre en el navegador** y
+ahí está la app. Se corta con `Ctrl+C` en la misma ventana.
 
 Los catálogos de arranque (especies, estaciones de demostración y vocabularios) se siembran solos en
 la primera apertura y quedan en IndexedDB. Después la app funciona sin conexión.
+
+### Abrirla en el teléfono, que es donde se usa
+
+El GPS, el micrófono y la cámara son del teléfono, así que probarla de verdad es probarla ahí.
+Con el computador y el teléfono **en la misma red wifi**:
+
+```bash
+cd ProTerr/app
+npm run dev -- --host
+```
+
+Ahora imprime también una dirección `Network: http://192.168.x.x:5173/`. Esa se escribe en el
+navegador del teléfono. Después, desde el menú del navegador:
+
+- **Android (Chrome)**: «Añadir a pantalla de inicio».
+- **iPhone (Safari)**: Compartir → «Añadir a pantalla de inicio».
+
+Queda como un ícono más y se abre a pantalla completa.
+
+> El micrófono y el GPS sólo funcionan en `https://` o en `localhost`. En el teléfono, por wifi y
+> con `http://`, el navegador va a bloquear el dictado por voz: se puede usar escribiendo, pero para
+> probar la voz hay que publicarla (paso siguiente).
+
+### Dejarla publicada
+
+```bash
+cd ProTerr/app
+npm run build        # deja la app lista en app/dist/
+```
+
+`app/dist/` es una carpeta de archivos estáticos: se sube tal cual a cualquier hosting gratuito
+(Netlify, Vercel, GitHub Pages). Al quedar en `https://` funcionan la voz, el GPS y la cámara, y el
+teléfono la guarda para usarla sin señal.
+
+### Comandos útiles
+
+```bash
+npm test             # las pruebas
+npm run typecheck    # revisar tipos
+npm run preview      # ver el build de producción en local
+```
 
 ## Estructura
 

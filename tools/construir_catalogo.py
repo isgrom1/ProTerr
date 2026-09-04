@@ -7,7 +7,8 @@ Uso:
 
 Entradas (CSV, encabezados reconocidos sin acentos ni mayúsculas):
     especies:   nombre_comun, nombre_cientifico, clase, orden, familia
-                (opcionales: reino, filo, genero, epiteto, subespecie)
+                (opcionales: reino, filo, genero, epiteto, subespecie,
+                 nombres_alternativos separados por ";")
     estaciones: id_estacion, proyecto, region, temporada, ambiente, ladera,
                 utm_este, utm_norte, y las banderas de metodología
 
@@ -105,7 +106,11 @@ def build_taxa(rows: list[dict[str, str]]) -> list[dict]:
         infra = row.get("subespecie") or (parts[2] if len(parts) >= 3 else None)
         cls = CLASS_MAP.get(fold(row.get("clase", "")))
 
-        keys = {fold(common)}
+        # Una misma especie tiene varios nombres según la zona ("Rana chilena"
+        # y "Rana grande chilena"). Son la MISMA especie: van como sinónimos,
+        # no como dos taxones, para no inventar una ambigüedad que no existe.
+        others = [n.strip() for n in re.split(r"[;|]", row.get("nombres alternativos", "")) if n.strip()]
+        keys = {fold(common)} | {fold(n) for n in others}
         if sci:
             keys.add(fold(sci))
             if genus and epithet:
@@ -114,7 +119,7 @@ def build_taxa(rows: list[dict[str, str]]) -> list[dict]:
             "id": stable_id("tx", sci or common, str(i)),
             "sourceCommonName": common,
             "commonName": common,
-            "otherCommonNames": [],
+            "otherCommonNames": others,
             "scientificName": sci, "scientificNameRaw": sci, "scientificNameNote": None,
             "kingdom": row.get("reino") or "Animalia",
             "phylum": row.get("filo") or "Chordata",
