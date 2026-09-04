@@ -230,3 +230,60 @@ describe('aristas de terreno', () => {
     expect(o.taxonIds).toEqual(['a1', 'a2']);
   });
 });
+
+describe('enumerar varios grupos de la misma especie', () => {
+  const frase = 'Tres loicas vocalizando, una loica macho, una loica hembra, '
+    + 'dos loicas vocalizando, un chincol macho, una loica hembra';
+
+  it('produce un registro por grupo, sin fundirlos', () => {
+    const r = parse(frase);
+    expect(r.observations).toHaveLength(6);
+    expect(r.observations.map((o) => [nameOf(o.taxonIds), o.individualCount, o.recordType, o.sex])).toEqual([
+      ['Loica', 3, 'Vocalización', null],
+      ['Loica', 1, 'Individuo', 'Macho'],
+      ['Loica', 1, 'Individuo', 'Hembra'],
+      ['Loica', 2, 'Vocalización', null],
+      ['Chincol', 1, 'Individuo', 'Macho'],
+      ['Loica', 1, 'Individuo', 'Hembra'],
+    ]);
+  });
+
+  it('el sexo de un grupo no se filtra al siguiente', () => {
+    const r = parse(frase);
+    expect(r.observations[0].sex).toBeNull(); // las tres vocalizando, sin sexo
+    expect(r.observations[3].sex).toBeNull();
+  });
+});
+
+describe('nombres genéricos de terreno', () => {
+  it('"tres golondrinas" ofrece las golondrinas del catálogo en vez de perderse', () => {
+    const r = parse('tres golondrinas');
+    expect(r.warnings).toHaveLength(0);
+    const [o] = r.observations;
+    expect(o.individualCount).toBe(3);
+    expect(o.taxonNeedsDisambiguation).toBe(true);
+    const nombres = o.taxonIds.map((id) => index.get(id)!.commonName);
+    expect(nombres).toContain('Golondrina chilena');
+    expect(nombres.length).toBeGreaterThan(1);
+  });
+
+  it('funciona con otros genéricos habituales', () => {
+    for (const [texto, esperado] of [['un picaflor', 'Picaflor chico'], ['dos zorros', 'Zorro culpeo'], ['una gaviota', 'Gaviota dominicana']] as const) {
+      const [o] = parse(texto).observations;
+      expect(o.taxonIds.map((id) => index.get(id)!.commonName)).toContain(esperado);
+      expect(o.taxonNeedsDisambiguation).toBe(true);
+    }
+  });
+
+  it('cuando el genérico deja una sola candidata, la resuelve sin preguntar', () => {
+    const [o] = parse('un cometocino').observations;
+    expect(nameOf(o.taxonIds)).toBe('Cometocino de Gay');
+    expect(o.taxonNeedsDisambiguation).toBe(false);
+  });
+
+  it('un nombre exacto le gana al genérico: "loica" no se vuelve ambiguo', () => {
+    const [o] = parse('tres loicas').observations;
+    expect(nameOf(o.taxonIds)).toBe('Loica');
+    expect(o.taxonNeedsDisambiguation).toBe(false);
+  });
+});

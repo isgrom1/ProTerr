@@ -180,7 +180,12 @@ export function validateDraft(draft: ObservationDraft, ctx: ValidationContext): 
     const v = valueOf(draft, field);
     const missing = v === null || v === undefined || v === '' || (Array.isArray(v) && !v.length);
     if (!missing) continue;
-    if (field === 'taxon' && issues.some((i) => i.field === 'taxon' && i.severity === 'blocker')) continue;
+    // La pregunta de desambiguación YA es la petición de especie: repetirla
+    // como "falta especie" sería decir dos veces lo mismo.
+    if (field === 'taxon' && issues.some((i) => i.field === 'taxon' || i.field === 'taxonAmbiguity')) {
+      if (draft.taxonCandidates.length) pendingFields.push(field);
+      continue;
+    }
     if (draft.acknowledgedPending.includes(field)) { pendingFields.push(field); continue; }
     if (req === 'required') {
       pendingFields.push(field);

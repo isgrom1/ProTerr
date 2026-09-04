@@ -57,7 +57,7 @@ Cada organización carga sus propios catálogos y su propio formulario. Ver
 ```bash
 cd app
 npm install
-npm test        # 183 pruebas
+npm test        # 192 pruebas
 npm run dev     # http://localhost:5173
 npm run build   # PWA instalable en dist/
 ```
@@ -94,7 +94,9 @@ app/src/
 
 - **No hay sintaxis obligatoria.** «Tres rayaditos, picaflor chico macho, una
   loica alimentándose» produce tres registros independientes; «dos tiuques
-  volando hacia el norte, altura veinte metros» produce uno solo.
+  volando hacia el norte, altura veinte metros» produce uno solo. Enumerar
+  varios grupos de la misma especie también funciona, y no se confunde con un
+  doble guardado.
 - **No bloquea.** Falta información ≠ no se puede guardar. Lo que falta queda
   registrado como pendiente, y se recuerda una vez.
 - **No inventa.** «Fecas de puma» no es `Puma ×1`: es evidencia indirecta sin

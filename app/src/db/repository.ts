@@ -248,7 +248,12 @@ export interface CommitResult {
  */
 export async function commitDraft(
   draft: ObservationDraft,
-  opts: { projectCode: string; pendingFields: string[]; occurrenceFix?: GeoFix | null; deviceFix?: GeoFix | null },
+  opts: {
+    projectCode: string; pendingFields: string[];
+    occurrenceFix?: GeoFix | null; deviceFix?: GeoFix | null;
+    /** Compartido por todos los registros de un mismo dictado. */
+    batchId?: string | null;
+  },
   session: Session,
 ): Promise<CommitResult> {
   if (!draft.projectId || !draft.campaignId || !draft.stationId || !draft.method) {
@@ -288,6 +293,7 @@ export async function commitDraft(
     aerial: draft.aerial,
     source: draft.source,
     verbatimUtterance: draft.verbatimUtterance,
+    batchId: opts.batchId ?? null,
     mediaIds: draft.mediaIds,
     pendingFields: opts.pendingFields,
     identificationConfidence: draft.identificationConfidence ?? 'seguro',

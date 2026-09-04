@@ -172,3 +172,28 @@ describe('tabla de especies', () => {
     expect(rows.find((r) => r.name === 'Paloma')?.exotic).toBe(true);
   });
 });
+
+describe('lo dictado junto no es un duplicado', () => {
+  it('varios grupos de la misma especie en una frase no se marcan', () => {
+    // "Tres loicas vocalizando... dos loicas vocalizando" son grupos distintos.
+    const r = analyzeQuality({
+      events: [event()], taxa,
+      occurrences: [
+        occ('a', { individualCount: 3, batchId: 'lote-1', createdAt: '2026-09-04T14:00:00Z' }),
+        occ('b', { individualCount: 2, batchId: 'lote-1', createdAt: '2026-09-04T14:00:01Z' }),
+      ],
+    });
+    expect(r.issues.some((i) => i.kind === 'duplicado')).toBe(false);
+  });
+
+  it('pero un re-dictado en otro lote sí se marca', () => {
+    const r = analyzeQuality({
+      events: [event()], taxa,
+      occurrences: [
+        occ('a', { batchId: 'lote-1', createdAt: '2026-09-04T14:00:00Z' }),
+        occ('b', { batchId: 'lote-2', createdAt: '2026-09-04T14:00:20Z' }),
+      ],
+    });
+    expect(r.issues.some((i) => i.kind === 'duplicado')).toBe(true);
+  });
+});

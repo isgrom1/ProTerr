@@ -335,6 +335,9 @@ export const useStore = create<State>((set, get) => ({
     const project = projects.find((p) => p.id === projectId);
     if (!project) { get().notify('Selecciona un proyecto antes de guardar.', 'error'); return; }
 
+    // Un solo lote para todo lo dictado junto: son observaciones distintas que
+    // el usuario enumeró, no un guardado repetido.
+    const batchId = uuid();
     let saved = 0;
     for (const draft of drafts) {
       const v = validations[draft.draftId];
@@ -344,6 +347,7 @@ export const useStore = create<State>((set, get) => ({
         {
           projectCode: project.code,
           pendingFields: v?.pendingFields ?? [],
+          batchId,
           deviceFix: fix,
           occurrenceFix: draft.occurrenceFixRequested ? fix : null,
         },

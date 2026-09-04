@@ -31,6 +31,8 @@ export class TaxonIndex {
   /** Claves agrupadas por número de palabras, para probar n-gramas largos primero. */
   private maxWords = 1;
   private keys: string[] = [];
+  /** Claves agrupadas por su primera palabra, para el match por prefijo. */
+  private byFirstWord = new Map<string, string[]>();
 
   constructor(taxa: Taxon[]) {
     for (const t of taxa) {
@@ -47,6 +49,12 @@ export class TaxonIndex {
       }
     }
     this.keys = [...this.byKey.keys()];
+    for (const key of this.keys) {
+      const first = key.split(' ')[0];
+      const list = this.byFirstWord.get(first);
+      if (list) list.push(key);
+      else this.byFirstWord.set(first, [key]);
+    }
   }
 
   get size(): number {
@@ -105,8 +113,39 @@ export class TaxonIndex {
   }
 
   /**
-   * Corrección ortográfica. Se usa sólo como segunda pasada, cuando ninguna
-   * posición del texto dio un match exacto: si no, una palabra corriente
+   * Nombre genérico: lo dicho es el comienzo del nombre de una o varias
+   * especies del catálogo. En terreno se dice "tres golondrinas" sin precisar
+   * cuál, y eso no debe perderse: si hay varias candidatas se devuelven todas
+   * para que la app pregunte; si hay una sola, se resuelve.
+   */
+  matchPrefixAt(tokens: string[], start: number): TaxonMatch | null {
+    for (let n = Math.min(3, tokens.length - start); n >= 1; n--) {
+      const window = tokens.slice(start, start + n);
+      for (const phrase of [window.join(' '), ...pluralVariants(window)]) {
+        if (phrase.length < 4) continue;
+        const candidates = (this.byFirstWord.get(phrase.split(' ')[0]) ?? [])
+          .filter((key) => key.startsWith(`${phrase} `));
+        if (!candidates.length) continue;
+
+        const ids: string[] = [];
+        for (const key of candidates) {
+          for (const id of this.byKey.get(key) ?? []) if (!ids.includes(id)) ids.push(id);
+        }
+        if (!ids.length) continue;
+        return {
+          taxonIds: ids, matchedKey: phrase, length: n,
+          // Una sola candidata es una abreviación segura; varias hay que preguntarlas.
+          confidence: ids.length === 1 ? 0.9 : 0.7,
+          ambiguous: ids.length > 1,
+        };
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Corrección ortográfica. Se usa como última pasada, cuando ninguna posición
+   * del texto dio un match exacto ni por prefijo: si no, una palabra corriente
    * ("dos", "macho") podría ganarle a la especie que sí está escrita bien.
    */
   matchFuzzyAt(tokens: string[], start: number): TaxonMatch | null {

@@ -184,19 +184,22 @@ export function parseUtterance(raw: string, ctx: ParseContext): ParsedUtterance 
 }
 
 /**
- * Dos pasadas: primero se busca una coincidencia exacta en todo el fragmento y
- * sólo si no hay ninguna se recurre a la corrección ortográfica. De lo
- * contrario "dos tiuques" podría resolverse por parecido antes de llegar a
- * "tiuque", que está escrito bien.
+ * Tres pasadas sobre todo el fragmento, en orden de certeza: nombre exacto,
+ * nombre genérico ("golondrina" -> las golondrinas del catálogo) y por último
+ * corrección ortográfica. Si no fuera en ese orden, "dos tiuques" podría
+ * resolverse por parecido antes de llegar a "tiuque", que está bien escrito.
  */
 function findTaxon(tokens: string[], index: TaxonIndex): { start: number; match: TaxonMatch } | null {
-  for (let i = 0; i < tokens.length; i++) {
-    const m = index.matchExactAt(tokens, i);
-    if (m) return { start: i, match: m };
-  }
-  for (let i = 0; i < tokens.length; i++) {
-    const m = index.matchFuzzyAt(tokens, i);
-    if (m) return { start: i, match: m };
+  const passes = [
+    (i: number) => index.matchExactAt(tokens, i),
+    (i: number) => index.matchPrefixAt(tokens, i),
+    (i: number) => index.matchFuzzyAt(tokens, i),
+  ];
+  for (const pass of passes) {
+    for (let i = 0; i < tokens.length; i++) {
+      const m = pass(i);
+      if (m) return { start: i, match: m };
+    }
   }
   return null;
 }

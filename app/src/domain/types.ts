@@ -334,6 +334,13 @@ export interface Occurrence extends Auditable {
   source: RecordSource;
   /** Transcripción de voz que originó el registro (trazabilidad + reentrenamiento). */
   verbatimUtterance?: string | null;
+  /**
+   * Identifica los registros guardados juntos desde un mismo dictado.
+   * "Tres loicas vocalizando, una loica macho, dos loicas vocalizando" son
+   * grupos distintos que el usuario enumeró a propósito: comparten lote y por
+   * eso nunca se confunden entre sí con un doble guardado.
+   */
+  batchId?: string | null;
   mediaIds: Uuid[];
   /** Preguntas abiertas que el usuario decidió dejar pendientes. */
   pendingFields: string[];

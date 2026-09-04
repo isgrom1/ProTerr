@@ -100,7 +100,10 @@ function findDuplicates(
 
     for (let i = 1; i < sorted.length; i++) {
       const gap = Date.parse(sorted[i].createdAt) - Date.parse(sorted[i - 1].createdAt);
-      if (gap <= DUPLICATE_WINDOW_MS) cluster.push(sorted[i]);
+      // Dos registros del mismo dictado NUNCA son un duplicado entre sí: el
+      // usuario los enumeró a propósito ("tres loicas... dos loicas...").
+      const sameBatch = Boolean(sorted[i].batchId) && sorted[i].batchId === sorted[i - 1].batchId;
+      if (gap <= DUPLICATE_WINDOW_MS && !sameBatch) cluster.push(sorted[i]);
       else { flush(); cluster = [sorted[i]]; }
     }
     flush();

@@ -241,3 +241,20 @@ describe('flujo simple: no exigir lo que el terreno no necesita', () => {
     expect(r.canSave).toBe(true);
   });
 });
+
+describe('desambiguación de nombre genérico', () => {
+  it('pregunta cuál especie y no repite "falta especie"', () => {
+    const candidatos = taxa.filter((t) => t.commonName.startsWith('Golondrina')).map((t) => t.id);
+    expect(candidatos.length).toBeGreaterThan(1);
+    const d = draftOf({
+      taxonId: null, taxonCandidates: candidatos, verbatimTaxonText: 'golondrina',
+      recordType: 'Individuo', individualCount: 3,
+    });
+    const r = validateDraft(d, { profile: DEFAULT_PROFILE, resolveTaxon });
+
+    expect(r.issues.filter((i) => i.field === 'taxonAmbiguity')).toHaveLength(1);
+    expect(whatIsMissing(r).some((m) => m.includes('Falta especie'))).toBe(false);
+    expect(r.canSave).toBe(true);              // se puede guardar y resolver después
+    expect(r.pendingFields).toContain('taxon'); // pero queda pendiente
+  });
+});

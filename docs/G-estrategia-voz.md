@@ -89,6 +89,10 @@ separe («EMF 10» → `EMF10`).
 - **El punto de `S. rubecula` no corta la frase**, ni la coma de «1,5 m».
 - **Resolver un plural no es corregir**: `rayaditos` → `Rayadito` no genera
   pregunta. `chukao` → `Chucao` sí.
+- **Enumerar grupos de la misma especie es normal.** "Tres loicas vocalizando,
+  una loica macho, dos loicas vocalizando" son tres registros distintos, no un
+  error de dictado. Los registros de un mismo dictado comparten lote y por eso
+  el detector de duplicados nunca los confunde entre sí.
 - **«muerto» es estado del organismo, no evidencia indirecta**: un cadáver es un
   individuo observado.
 

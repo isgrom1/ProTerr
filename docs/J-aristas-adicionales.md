@@ -175,7 +175,7 @@ detecta:
 
 | Hallazgo | Severidad |
 |---|---|
-| Mismo taxón, mismo evento, mismo tipo de registro, en menos de un minuto | alta |
+| Mismo taxón, mismo evento, mismo tipo de registro, en menos de un minuto y **de dictados distintos** | alta |
 | Especie amenazada sin fotografía | alta |
 | Registro marcado «validado» que conserva campos pendientes | alta |
 | Muestreo sin esfuerzo registrado | media |
