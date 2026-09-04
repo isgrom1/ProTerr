@@ -5,6 +5,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { coverage } from '../../conservation/status';
 import { backupFileName, createBackup, restoreBackup } from '../../db/backup';
+import { previewMerge, type MergePreview } from '../../db/merge';
 import { db } from '../../db/db';
 import type { Taxon } from '../../domain/types';
 import { buildDwcArchive, toCsv } from '../../export/dwca';
@@ -44,10 +45,13 @@ export function Resumen() {
   const [endpoint, setEndpoint] = useState<string>(() => globalThis.localStorage?.getItem('proterr.endpoint') ?? '');
   const [policy, setPolicy] = useState<SensitivityPolicy>('exacta');
   const [includeMedia, setIncludeMedia] = useState(true);
+  const [mergePreview, setMergePreview] = useState<MergePreview | null>(null);
+  const [mergeFile, setMergeFile] = useState<unknown>(null);
   useEffect(() => { void s.refreshQuality(); }, [s.records.length]);
   const today = new Date().toISOString().slice(0, 10);
   const todays = s.records.filter((r) => r.event.eventDate === today);
 
+  const taxonNombre = (id: string) => s.taxonIndex?.get(id)?.commonName ?? id;
   const pendingRows = useMemo(() => (s.plan ? pendingPlan(s.plan) : []), [s.plan]);
   const stats = useMemo(() => ({
     stations: new Set(todays.map((r) => r.event.stationId)).size,
@@ -191,6 +195,111 @@ export function Resumen() {
           </ul>
         </section>
       )}
+
+      {/* Salir de a dos es lo normal, y cada uno lleva su teléfono. Sin esto,
+          el equipo vuelve al Excel compartido para juntar la jornada. */}
+      <section className="card">
+        <h2>Unir la jornada del equipo</h2>
+        <p className="muted" style={{ fontSize: 13, marginTop: 0 }}>
+          Hay dos maneras de que dos personas trabajen sobre los mismos datos. Ninguna es
+          mejor que la otra: dependen de si tienes un servidor.
+        </p>
+
+        <div className="formatos" style={{ marginBottom: 12 }}>
+          <div className="formato" style={{ cursor: 'default' }}>
+            <b>Unir respaldos</b>
+            <span className="que">
+              Cada uno exporta su respaldo al llegar y uno de los dos los une. <b>No necesita
+              servidor ni señal</b>, que es donde ocurre el trabajo. Antes de unir, la app te
+              muestra qué trae el archivo del otro y qué pudo haberse contado dos veces.
+            </span>
+            <span className="cifras">Disponible ahora · abajo</span>
+          </div>
+          <div className="formato" style={{ cursor: 'default', opacity: .7 }}>
+            <b>Sincronizar por servidor</b>
+            <span className="que">
+              Los dos teléfonos suben a un servidor común y se ven en vivo. Es más cómodo,
+              pero <b>hay que montar y pagar ese servidor</b>, y sin señal —que es casi
+              siempre— igual se trabaja fuera de línea y se sube después.
+            </span>
+            <span className="cifras">
+              {endpoint ? 'Configurado más abajo' : 'Sin servidor configurado'}
+            </span>
+          </div>
+        </div>
+
+        <label className="btn" style={{ display: 'grid', placeItems: 'center' }}>
+          Revisar el respaldo de un compañero
+          <input type="file" accept=".json" hidden onChange={async (e) => {
+            const file = e.target.files?.[0];
+            e.target.value = '';
+            if (!file) return;
+            try {
+              setMergeFile(JSON.parse(await file.text()));
+              setMergePreview(await previewMerge(JSON.parse(await file.text())));
+            } catch (err) {
+              s.notify(err instanceof Error ? err.message : 'No se pudo leer el archivo.', 'error');
+            }
+          }} />
+        </label>
+
+        {mergePreview && (
+          <div style={{ marginTop: 12 }}>
+            <p style={{ margin: '0 0 6px' }}>
+              <b>{mergePreview.origen.observadores.join(', ') || 'Sin observador declarado'}</b>
+              <span className="muted"> · equipo {mergePreview.origen.deviceId.slice(0, 8)}</span>
+            </p>
+            <p className="muted" style={{ fontSize: 13, margin: '0 0 8px' }}>
+              {mergePreview.dias.length} día(s): {mergePreview.dias.join(', ')} ·{' '}
+              {mergePreview.estaciones.length} estación(es): {mergePreview.estaciones.join(', ')}
+            </p>
+            <p style={{ margin: '0 0 8px' }}>
+              <span className="chip ok">{mergePreview.nuevos} nuevos</span>{' '}
+              <span className="chip">{mergePreview.yaEstaban} ya estaban</span>{' '}
+              {mergePreview.enConflicto > 0 && (
+                <span className="chip warn">{mergePreview.enConflicto} con distinto contenido</span>
+              )}
+            </p>
+
+            {mergePreview.posiblesDobles.length > 0 && (
+              <div className="issue" data-severity="question">
+                <p style={{ margin: 0 }}>
+                  <b>{mergePreview.posiblesDobles.length} posible(s) doble conteo.</b> La misma
+                  especie, en el mismo punto y a menos de media hora, anotada por los dos.
+                  Probablemente es un animal, no dos. No se borra nada: revísalos en Registros
+                  después de unir.
+                </p>
+                <ul className="issues" style={{ marginTop: 8 }}>
+                  {mergePreview.posiblesDobles.slice(0, 6).map((d) => (
+                    <li key={d.ids.join('-')}>
+                      {taxonNombre(d.taxon)} · {d.eventDate} · {d.horas[0]} ({d.observadores[0]})
+                      {' y '}{d.horas[1]} ({d.observadores[1]})
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {mergePreview.avisos.map((a) => (
+              <p key={a} className="chip warn" style={{ display: 'block', marginBottom: 8 }}>{a}</p>
+            ))}
+
+            <div className="row">
+              <button className="btn primary" onClick={async () => {
+                const report = await restoreBackup(mergeFile, 'fusionar');
+                await s.refreshRecords();
+                const added = Object.values(report.inserted).reduce((a, b) => a + b, 0);
+                setMergePreview(null);
+                setMergeFile(null);
+                s.notify(`${added} registro(s) del equipo unidos a tu jornada.`);
+              }}>Unir a mi jornada</button>
+              <button className="btn ghost" onClick={() => { setMergePreview(null); setMergeFile(null); }}>
+                Cancelar
+              </button>
+            </div>
+          </div>
+        )}
+      </section>
 
       <section className="card">
         <h2>Respaldo local</h2>
