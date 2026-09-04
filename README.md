@@ -52,6 +52,21 @@ organización**. Todo lo que trae fue escrito para este proyecto:
 Cada organización carga sus propios catálogos y su propio formulario. Ver
 [K. Plantillas por consultora](docs/K-plantillas.md).
 
+## Sobre la librería de Excel
+
+`xlsx` (SheetJS) **no se instala desde npm**, sino desde el servidor de SheetJS:
+
+```json
+"xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
+```
+
+No es un capricho. La versión de npm quedó congelada en 0.18.5 y arrastra dos
+vulnerabilidades altas sin corrección —contaminación de prototipo y denegación de
+servicio por expresión regular— que importan especialmente aquí, porque la app abre
+planillas que llegan de terceros. SheetJS dejó de publicar en npm y mantiene las
+versiones corregidas en su propio servidor. Si al instalar aparece un error de red en
+`cdn.sheetjs.com`, es esa dependencia: no la reemplaces por la de npm.
+
 ## Cómo abrirla por primera vez
 
 ProTerr no se instala desde una tienda de aplicaciones: es una **PWA**, una página web que el
