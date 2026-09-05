@@ -147,6 +147,12 @@ function duracion(segundos: number): string {
   const min = Math.floor(segundos / 60);
   const seg = segundos % 60;
   if (min === 0) return `${seg} s`;
+  // Sobre una hora, "120 min" deja de leerse. El total acumulado llega ahí.
+  if (min >= 60) {
+    const horas = Math.floor(min / 60);
+    const resto = min % 60;
+    return resto === 0 ? `${horas} h` : `${horas} h ${resto} min`;
+  }
   if (seg === 0) return `${min} min`;
   return `${min} min ${seg} s`;
 }
