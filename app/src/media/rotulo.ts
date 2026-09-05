@@ -126,46 +126,66 @@ function etiquetaCorta(id: string): string {
   return CORTAS[id] ?? etiquetaDeCampo(id);
 }
 
-/** Cómo se ve el rótulo sobre la imagen. Todo relativo al ancho de la foto. */
+/**
+ * Cómo se ve el rótulo. Todo relativo al ancho de la foto, para que se vea
+ * igual en una imagen de 1600 px que en una de 4000.
+ *
+ * **Sin recuadro y sin fondo.** Un rectángulo negro semitransparente tapa parte
+ * de la foto y le da aire de marca de agua de aplicación gratuita. La forma
+ * correcta de escribir sobre una imagen que puede ser cielo blanco o sotobosque
+ * negro es la que usan los mapas y las transmisiones deportivas: letra clara con
+ * un contorno oscuro alrededor. Se lee sobre cualquier fondo y no oculta nada.
+ */
 const ESTILO = {
-  /** Alto de línea como fracción del ancho de la imagen. */
-  lineaRel: 0.032,
-  margenRel: 0.022,
-  opacidadFondo: 0.62,
+  /** Cuerpo de letra como fracción del ancho de la imagen. */
+  cuerpoRel: 0.024,
+  /** La primera línea —el punto— se lee de un vistazo y va más grande. */
+  factorPrimera: 1.35,
+  margenRel: 0.026,
+  interlineado: 1.42,
+  /** Grosor del contorno respecto al cuerpo de letra. */
+  contornoRel: 0.17,
 };
 
 /**
- * Dibuja el rótulo abajo a la izquierda. Fondo oscuro semitransparente porque
- * una foto de terreno puede ser cielo blanco o sotobosque negro, y el texto
- * tiene que leerse en las dos.
+ * Dibuja el rótulo abajo a la izquierda, sobre la foto y sin recuadro.
+ *
+ * Cada línea se traza dos veces: primero el contorno oscuro y encima la letra
+ * clara. Ese halo es lo que la hace legible contra un cielo blanco sin necesidad
+ * de ponerle una caja detrás.
  */
 export function dibujarRotulo(
   ctx: CanvasRenderingContext2D, lineas: LineaRotulo[], ancho: number, alto: number,
 ): void {
   if (!lineas.length) return;
 
-  const linea = Math.max(11, Math.round(ancho * ESTILO.lineaRel));
+  const cuerpo = Math.max(12, Math.round(ancho * ESTILO.cuerpoRel));
+  const primera = Math.round(cuerpo * ESTILO.factorPrimera);
   const margen = Math.round(ancho * ESTILO.margenRel);
-  const relleno = Math.round(linea * 0.45);
-  const fuente = Math.round(linea * 0.68);
+
+  const tamanos = lineas.map((_, i) => (i === 0 ? primera : cuerpo));
+  const altos = tamanos.map((t) => t * ESTILO.interlineado);
+  const total = altos.reduce((a, b) => a + b, 0);
 
   ctx.save();
-  ctx.font = `${fuente}px system-ui, -apple-system, Segoe UI, Roboto, sans-serif`;
-  ctx.textBaseline = 'middle';
-
-  const textos = lineas.map((l) => `${l.etiqueta}: ${l.valor}`);
-  const anchoTexto = Math.max(...textos.map((t) => ctx.measureText(t).width));
-  const cajaAncho = Math.min(ancho - margen * 2, anchoTexto + relleno * 2);
-  const cajaAlto = linea * lineas.length + relleno * 2;
-  const x = margen;
-  const y = alto - margen - cajaAlto;
-
-  ctx.fillStyle = `rgba(0, 0, 0, ${ESTILO.opacidadFondo})`;
-  ctx.fillRect(x, y, cajaAncho, cajaAlto);
-
+  ctx.textBaseline = 'alphabetic';
+  ctx.lineJoin = 'round';
+  ctx.miterLimit = 2;
+  ctx.strokeStyle = 'rgba(0, 0, 0, 0.92)';
   ctx.fillStyle = '#ffffff';
-  textos.forEach((t, i) => {
-    ctx.fillText(t, x + relleno, y + relleno + linea * i + linea / 2, cajaAncho - relleno * 2);
+
+  let y = alto - margen - total;
+  lineas.forEach((linea, i) => {
+    const tam = tamanos[i];
+    const peso = i === 0 ? 650 : 500;
+    ctx.font = `${peso} ${tam}px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif`;
+    ctx.lineWidth = Math.max(1.6, tam * ESTILO.contornoRel);
+
+    const texto = `${linea.etiqueta}: ${linea.valor}`;
+    const lineaBase = y + tam;
+    ctx.strokeText(texto, margen, lineaBase, ancho - margen * 2);
+    ctx.fillText(texto, margen, lineaBase, ancho - margen * 2);
+    y += altos[i];
   });
   ctx.restore();
 }
