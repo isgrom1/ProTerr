@@ -21,6 +21,7 @@ import type {
   ReviewState, SamplingEvent, Station, StationSite, Taxon,
 } from '../domain/types';
 import { SEA_DWC_TEMPLATE } from '../export/seaTemplate';
+import { registrarApertura, acceso as leerAcceso, type Acceso } from '../licence/licencia';
 import { NATIVE_TEMPLATE, type ExportTemplate } from '../export/template';
 
 /**
@@ -52,6 +53,8 @@ export interface RecordRow {
 interface State {
   ready: boolean;
   screen: Screen;
+  /** Si la jornada de hoy está abierta y por qué. null mientras no se consulta. */
+  acceso: Acceso | null;
   session: Session;
   banner: { text: string; tone: 'ok' | 'warn' | 'error' } | null;
 
@@ -93,6 +96,7 @@ interface State {
 
   init(): Promise<void>;
   setScreen(s: Screen): void;
+  refreshAcceso(): Promise<void>;
   notify(text: string, tone?: 'ok' | 'warn' | 'error'): void;
   select(patch: { projectId?: string; campaignId?: string; stationId?: string; method?: MethodCode }): void;
   requestGps(): Promise<void>;
@@ -203,6 +207,7 @@ function draftFrom(
 export const useStore = create<State>((set, get) => ({
   ready: false,
   screen: 'terreno',
+  acceso: null,
   session: { userId: 'local', userName: 'Usuario de terreno', deviceId: deviceId() },
   banner: null,
   projects: [], campaigns: [], stations: [], taxonIndex: null, vocabularies: {},
@@ -241,9 +246,12 @@ export const useStore = create<State>((set, get) => ({
     await get().refreshRecords();
     await refreshActiveEvent(set, get);
     await refreshPlan(set, get);
+    set({ acceso: await registrarApertura() });
   },
 
   setScreen(screen) { set({ screen }); },
+
+  async refreshAcceso() { set({ acceso: await leerAcceso() }); },
   notify(text, tone = 'ok') {
     set({ banner: { text, tone } });
     setTimeout(() => set((s) => (s.banner?.text === text ? { banner: null } : s)), 4000);
@@ -417,9 +425,15 @@ export const useStore = create<State>((set, get) => ({
   },
 
   async saveAll() {
-    const { drafts, validations, session, projects, projectId, fix } = get();
+    const { drafts, validations, session, projects, projectId, fix, acceso } = get();
     const project = projects.find((p) => p.id === projectId);
     if (!project) { get().notify('Selecciona un proyecto antes de guardar.', 'error'); return; }
+    // La pantalla ya no debería dejar llegar hasta acá, pero guardar es la
+    // operación que no se puede colar: se revisa de nuevo antes de escribir.
+    if (acceso && !acceso.puedeRegistrar) {
+      get().notify('La jornada está cerrada. Libera el día o suscríbete para registrar.', 'warn');
+      return;
+    }
 
     // Un solo lote para todo lo dictado junto: son observaciones distintas que
     // el usuario enumeró, no un guardado repetido.

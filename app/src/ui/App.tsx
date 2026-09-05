@@ -5,6 +5,7 @@ import { applyModo, readModo } from './modo';
 import { Confirmar } from './screens/Confirmar';
 import { Registros } from './screens/Registros';
 import { Terreno } from './screens/Terreno';
+import { Acceso } from './screens/Acceso';
 
 // Resumen y Ajustes arrastran la librería de Excel (~900 kB). Se cargan aparte
 // para que la pantalla de terreno, que es la que se usa con el celular en la
@@ -33,18 +34,25 @@ export function App() {
     return <div className="app"><main className="main"><p className="muted">Cargando catálogos…</p></main></div>;
   }
 
+  // Con la jornada cerrada se reemplazan las dos pantallas que escriben. El
+  // resto —registros, resumen, respaldo— queda intacto: bloquear no es retener.
+  const cerrada = s.acceso !== null && !s.acceso.puedeRegistrar;
+
   return (
     <div className="app">
       <header className="topbar">
         <h1>ProTerr</h1>
         <span className="chip">
-          {s.sync.pending > 0 ? <><span className="dot pending" /> {s.sync.pending} en cola</> : <><span className="dot synced" /> al día</>}
+          {cerrada
+            ? <><span className="dot pending" /> jornada cerrada</>
+            : s.sync.pending > 0 ? <><span className="dot pending" /> {s.sync.pending} en cola</>
+            : <><span className="dot synced" /> al día</>}
         </span>
       </header>
 
       <main className="main">
-        {s.screen === 'terreno' && <Terreno />}
-        {s.screen === 'confirmar' && <Confirmar />}
+        {s.screen === 'terreno' && (cerrada ? <Acceso /> : <Terreno />)}
+        {s.screen === 'confirmar' && (cerrada ? <Acceso /> : <Confirmar />)}
         {s.screen === 'registros' && <Registros />}
         <Suspense fallback={<p className="muted">Cargando…</p>}>
           {s.screen === 'jornada' && <Jornada />}

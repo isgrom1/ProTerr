@@ -396,60 +396,96 @@ las cuatro quedan identificadas N/E/S/O sin escribir nada.
 
 ---
 
-## J.18 Modelo de licencia (decidido, sin implementar)
+## J.18 Modelo de licencia (implementado)
 
-**Ciclo fijo que se repite: 2 días gratis, 5 días de pago, 2 gratis, 5 de pago,
-y así indefinidamente.**
+Tres caminos, y el usuario elige cuál. **Ninguno de los tres retiene datos.**
 
-**Los 2 gratis de un ciclo no se suman a los 2 del siguiente.** No se ahorran ni
-se acumulan: si no se usan, se pierden al empezar los 5 de pago. Nunca hay 4 días
-gratis seguidos.
+### 1. El ciclo: 2 días gratis, 5 de pago
 
-El ciclo arranca con el primer uso y corre continuo desde ahí.
+Se repite indefinidamente y arranca con el primer uso. **Los 2 gratis no se
+acumulan**: son posicionales, no un saldo. Quien no sale a terreno en tres
+semanas no vuelve con seis días guardados —vuelve con dos—. Por eso el código no
+tiene contador de días gratis consumidos: la posición en el ciclo es toda la
+información necesaria (`licence/ciclo.ts`).
 
-La app **nunca deja de funcionar ni retiene los datos**. Lo que se bloquea en los
-días de pago es registrar nuevo; leer, exportar y respaldar lo ya guardado sigue
-disponible siempre. Un dato de terreno que no se puede sacar es un dato secuestrado,
-y eso no se hace.
+**La jornada corre de 04:00 a 04:00, no de medianoche a medianoche.** El
+monitoreo de tránsito aéreo nocturno se hace entre las 22:00 y las 02:00; con el
+corte a medianoche la app se cerraría en mitad de un conteo, con el observador en
+un cerro y sin señal para desbloquearla. A las 04:00 no hay nadie trabajando.
 
-**Publicidad: una sola, al abrir la app.** Nada durante el trabajo, y nunca
-bloqueando el arranque: si no hay señal —que en terreno es lo normal— la app abre
-igual, sin aviso y sin esperar.
+### 2. Liberar un día viendo videos
 
-Se sirve con una red de publicidad, no con acuerdos directos. La decisión es
-consciente: vender directo a marcas del rubro daría mejor inventario pero exige
-una labor comercial que hoy no existe. El precio de usar red es que se muestra lo
-que la red tenga, y que la red rastrea al dispositivo.
+**40 minutos acumulados valen una jornada, sin tope.** Quien esté dispuesto a
+mirar avisos puede usar ProTerr gratis para siempre. Es una decisión tomada, no
+un descuido: la fricción de los cuarenta minutos ES el argumento de venta de la
+suscripción. Al precio real del video recompensado en Chile —unos US$5 de eCPM—
+tres minutos dejan $28 y un día de suscripción vale $380. El desbloqueo por
+videos no es una línea de ingreso: es lo que evita que el consultor cierre la app
+y vuelva al cuaderno en el día 4 de una campaña en Aysén.
 
-En una PWA la red es **AdSense**, no AdMob: AdMob es para aplicaciones nativas
-con SDK y esta app es web. Eso obliga a tres cosas antes de encender nada:
+Tres reglas de comportamiento, todas con prueba:
 
-1. **Un dominio con la app publicada.** AdSense no aprueba una app que corre en
-   `localhost` ni en una IP de la red local.
-2. **Política de privacidad y aviso de cookies.** Los exige AdSense, y además hay
-   que escribirla en serio: tiene que decir que el aviso rastrea, y dejar
-   igualmente claro que **los registros de fauna nunca salen del dispositivo**.
-   Son dos cosas separadas y el usuario tiene que poder distinguirlas.
-3. **Aislamiento estricto.** El aviso vive en su propio recuadro y no comparte
-   nada con la base de datos local. Una consultora tiene que poder auditar que el
-   dato de su proyecto no pasó por ahí.
+- **Los segundos sobrantes se guardan.** Diez minutos hoy y treinta mañana
+  liberan el día igual. Sin esto el modelo sólo serviría para quien pueda
+  sentarse cuarenta minutos seguidos.
+- **Un día acreditado no se gasta solo.** Si se gastara al abrir, quien entra el
+  domingo a mirar el resumen perdería un día de terreno sin enterarse. Se gasta
+  al apretar el botón, y cubre la jornada completa: cerrar y volver a abrir no
+  cobra de nuevo.
+- **Se le muestra el tiempo total que lleva mirando avisos.** Es su tiempo y
+  tiene derecho a saber cuánto gastó. Que además sea el mejor argumento para
+  suscribirse es cierto y no lo hace menos honesto.
+
+### 3. Suscripción
+
+Abre todos los días, sin videos y sin aviso al abrir. Renovar antes de vencer
+suma sobre lo que queda, no lo pisa. **Falta el cobro**: necesita servidor.
+
+### Lo que el bloqueo NO hace
+
+Se cierra **registrar especies nuevas**, y nada más. Leer, exportar y respaldar
+están siempre disponibles: un dato de terreno que no se puede sacar es un dato
+secuestrado. En la interfaz eso significa que sólo las pestañas Terreno y
+Confirmar se reemplazan por la puerta; Registros, Jornada, Resumen y Ajustes
+siguen intactas.
+
+### La costura de publicidad, sin proveedor detrás
+
+`licence/ads.ts` define `ProveedorAds` y hoy exporta `SIN_ADS`: **no hay red
+conectada**. Es deliberado. Los eCPM que hacen viable este modelo —US$3 a US$5—
+vienen de los SDK de AdMob, Unity o ironSource, y **ésos sólo existen dentro de
+una app instalada desde la tienda**. ProTerr es una PWA: desde la web sólo se
+puede mostrar display, que paga veinte veces menos (ver J.20).
+
+Todo el resto del sistema funciona y está probado contra esa interfaz. El día que
+exista el envoltorio nativo se escribe un `ProveedorAds` más y no se toca nada
+más. Mientras tanto la pantalla lo dice en voz alta en vez de mostrar un botón
+muerto, y el progreso que alguien acumule se guarda igual.
+
+### El reloj atrasado se anota, no se castiga
+
+Sin servidor esto es inevitablemente confiable-por-honor: quien quiera saltárselo
+cambiando la fecha del teléfono, se lo salta. Pero un equipo viejo al que se le
+agotó la batería también amanece con el reloj en 1970, y bloquear a esa persona
+en terreno sería mucho peor que perder una licencia. Se registra el desajuste, se
+le avisa —porque la hora de sus registros sale de ahí— y se resuelve el día que
+exista servidor.
 
 ### Cobro
 
 **PayPal, a la cuenta del autor.** Es lo disponible ahora y sirve para partir.
-Conviene saber que en Chile el retiro a cuenta bancaria funciona pero cuesta: una
-tarifa fija por retiro más un porcentaje por cambio de divisa, y los fondos
-llegan en un par de días hábiles. Para un cobro recurrente en pesos vale la pena
-comparar más adelante con Flow, Mercado Pago o Webpay, que cobran en moneda local
-y evitan la conversión.
+En Chile el retiro a cuenta bancaria funciona pero cuesta: entre comisión de
+recepción y conversión de divisa se pierde cerca del 13 %. Para un cobro
+recurrente en pesos conviene comparar más adelante con Flow, Mercado Pago o
+Webpay, que cobran en moneda local y evitan la conversión.
 
-### Lo que hay que resolver antes de construirlo
+### Lo que falta, y exige servidor
 
-- **Dónde vive.** Exige un servidor que sepa quién eres y cuántos días llevas. Hoy
-  no existe: la app no tiene cuenta, ni servidor, ni analítica.
-- **Separación estricta.** La licencia por un lado y los registros de fauna por otro.
-  El servidor de licencias no puede ver ni un dato de terreno: son datos de proyectos
-  de terceros y ése es el compromiso que la app tiene hoy por no tener servidor.
+- **Cobrar.** No hay pasarela ni forma de activar una suscripción real.
+- **Que la licencia no sea burlable.** Ver el reloj, arriba.
+- **Separación estricta.** El servidor de licencias no puede ver ni un dato de
+  terreno. Son datos de proyectos de terceros, y no tener servidor es hoy la
+  garantía de eso.
 
 ## J.19 La categoría de conservación se consulta, no se guarda
 
@@ -515,3 +551,42 @@ falsa. Mientras tanto, la regla de terreno es que **una sola persona abre el
 muestreo** y las demás registran contra esa estación; el esfuerzo queda
 correcto. Conviene dejarlo escrito en el protocolo del proyecto hasta que exista
 el backend.
+
+## J.20 Qué formato de publicidad paga, y por qué no da igual
+
+Cifras buscadas en septiembre de 2026. «Publicidad» no es una cosa: son seis, y
+entre la peor y la mejor hay un factor de cien.
+
+| Formato | eCPM Chile | 20 usuarios | 200 usuarios | Exige |
+|---|---|---|---|---|
+| Banner o display (AdSense) | US$0,50 | $570 | $5.700 | Nada |
+| Aviso al abrir (app open) | US$1,50 | $1.710 | $17.100 | App en tiendas |
+| Intersticial | US$3 | $3.420 | $34.200 | App en tiendas |
+| Video recompensado | US$5 | $5.700 | $57.000 | App en tiendas + señal |
+| Offerwall | US$400+ | descartado | descartado | — |
+| Patrocinio directo | US$30–100 | no vendible | $150.000–300.000 | Vender a mano |
+
+Cálculo a 2 aperturas por usuario al día, dólar a $950.
+
+**El obstáculo estructural: ProTerr es una PWA.** Sólo la primera fila corre en
+la web. El resto necesita empaquetar con Capacitor y publicar en las tiendas:
+Google Play US$25 una vez, **Apple US$99 al año**. Con 20 usuarios el video
+recompensado deja $68.400 al año y la cuenta de Apple sola cuesta $94.000: ir a
+nativo sólo por publicidad no se paga hasta unos 30 usuarios.
+
+**El offerwall se descarta por contexto, no por número.** Es el formato que más
+paga —US$400 a US$530 de eCPM— pero ese eCPM es por *completar* ofertas:
+instalar juegos, registrarse en pruebas gratis. Una app que entrega datos a la
+autoridad ambiental con un muro que dice «instala este juego y gana 3 días»
+pierde la credibilidad de la que depende todo lo demás.
+
+**El patrocinio directo es el único que mueve la aguja.** Google no sabe que los
+usuarios de ProTerr son *todos* biólogos de terreno chilenos; un distribuidor de
+cámaras trampa sí. También compran laboratorios ambientales, diplomados en
+manejo de vida silvestre y las propias consultoras reclutando terrenistas por
+campaña. La contra es real: hay que llamar, mandar correo y emitir boleta, y por
+debajo de unos 200 usuarios activos no hay nada que vender.
+
+Consecuencia para el orden de trabajo: **debajo de 200 usuarios la publicidad no
+es el tema**. Lo que paga antes de esa marca es la licencia a la consultora y la
+suscripción individual, en ese orden.
