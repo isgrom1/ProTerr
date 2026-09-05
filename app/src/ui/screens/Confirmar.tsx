@@ -12,6 +12,8 @@ import { preparePhoto, suggestionFrom, type PhotoSuggestion } from '../../media/
 import { attachMedia } from '../../db/repository';
 import type { ObservationDraft } from '../../domain/draft';
 import { useStore } from '../../state/store';
+import { Camara } from '../Camara';
+import { rotuloEnVivo } from '../../media/rotulo';
 import { recordTypeOptions } from '../../validation/methodFields';
 import { requirementFor, type RequirableField } from '../../validation/profiles';
 import { METHOD_LABELS } from './Terreno';
@@ -377,8 +379,45 @@ function PhotoButton({ draftId }: { draftId: string }) {
   const draft = s.drafts.find((d) => d.draftId === draftId)!;
   const [suggestions, setSuggestions] = useState<PhotoSuggestion[]>([]);
   const [saved, setSaved] = useState<{ from: number; to: number } | null>(null);
+  const [camara, setCamara] = useState(false);
 
   const stationCodes = s.stations.filter((st) => st.projectId === s.projectId).map((st) => st.stationCode);
+
+  // El rótulo del visor sale del registro que se está confirmando, así que no
+  // puede quedarse con el punto anterior: es el problema de J.16 resuelto antes
+  // de que ocurra, en vez de detectado después contra el GPS.
+  const ahora = new Date();
+  const lineas = rotuloEnVivo({
+    project: s.projects.find((p) => p.id === s.projectId) ?? null,
+    station: s.stations.find((st) => st.id === (draft.stationId ?? s.stationId)) ?? null,
+    fix: s.fix,
+    fecha: `${ahora.getFullYear()}-${String(ahora.getMonth() + 1).padStart(2, '0')}-${String(ahora.getDate()).padStart(2, '0')}`,
+    hora: ahora.toTimeString().slice(0, 5),
+  });
+
+  /**
+   * Guarda una foto ya preparada y la cuelga del borrador.
+   *
+   * Lee el borrador vigente del store, no el de la vuelta de render: al tomar
+   * varias fotos seguidas con la cámara, `draft.mediaIds` de esta closure se
+   * queda con la lista de la primera y las siguientes se perderían.
+   */
+  async function guardarFoto(prepared: Awaited<ReturnType<typeof preparePhoto>>, nombre: string, rumbo?: number | null) {
+    const media = await attachMedia({
+      occurrenceId: null, eventId: null, kind: 'foto',
+      mimeType: prepared.blob.type || 'image/jpeg', blob: prepared.blob,
+      capturedAt: prepared.metadata.takenAt ?? new Date().toISOString(),
+      // La posición de la foto manda sobre la del dispositivo: es la del
+      // momento exacto del avistamiento. La brújula sólo entra si no hubo EXIF.
+      fix: prepared.fix ?? s.fix,
+      headingDegrees: prepared.metadata.headingDegrees ?? rumbo ?? null,
+      exif: prepared.metadata as unknown as Record<string, unknown>,
+      fileName: nombre,
+    }, s.session);
+    const actual = useStore.getState().drafts.find((d) => d.draftId === draftId);
+    s.patchDraft(draftId, { mediaIds: [...(actual?.mediaIds ?? []), media.id] });
+    return media;
+  }
 
   return (
     <div className="field">
@@ -396,26 +435,32 @@ function PhotoButton({ draftId }: { draftId: string }) {
             const prepared = await preparePhoto(file);
             from += prepared.originalBytes;
             to += prepared.bytes;
-            const media = await attachMedia({
-              occurrenceId: null, eventId: null, kind: 'foto',
-              mimeType: prepared.blob.type || 'image/jpeg', blob: prepared.blob,
-              capturedAt: prepared.metadata.takenAt ?? new Date().toISOString(),
-              // La posición de la foto manda sobre la del dispositivo: es la
-              // del momento exacto del avistamiento.
-              fix: prepared.fix ?? s.fix,
-              headingDegrees: prepared.metadata.headingDegrees,
-              exif: prepared.metadata as unknown as Record<string, unknown>,
-              fileName: file.name,
-            }, s.session);
+            const media = await guardarFoto(prepared, file.name);
             ids.push(media.id);
             found.push(suggestionFrom(prepared, stationCodes));
           }
 
-          s.patchDraft(draftId, { mediaIds: [...draft.mediaIds, ...ids] });
           setSaved({ from, to });
           setSuggestions(found.filter((f) => f.fix || f.stationCode || f.time));
         }}
       />
+
+      <div className="row">
+        <button className="btn" onClick={() => setCamara(true)}>
+          Cámara con rótulo
+        </button>
+      </div>
+
+      {camara && (
+        <Camara
+          lineas={lineas}
+          onCerrar={() => setCamara(false)}
+          onFoto={async (blob, rumbo) => {
+            const prepared = await preparePhoto(blob);
+            await guardarFoto(prepared, `proterr-${Date.now()}.jpg`, rumbo);
+          }}
+        />
+      )}
 
       {saved && saved.from > saved.to && (
         <span className="muted" style={{ fontSize: 12 }}>

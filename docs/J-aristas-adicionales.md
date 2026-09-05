@@ -363,6 +363,46 @@ cruzarlo con nada, ese error viaja hasta el informe.
 **Manda el GPS**, porque es el dato que no se olvida de actualizar. La etiqueta
 queda registrada igual, para poder auditar la discrepancia.
 
+**Lo implementado después: que el rótulo lo escriba la app.** Detectar el error
+es peor que no cometerlo. Si ProTerr pone el rótulo, no puede quedarse
+atrasado: sale del registro, y el registro sabe en qué punto está porque el
+consultor acaba de elegirlo y el GPS lo confirma.
+
+La cámara vive dentro de la app (`media/camara.ts`, `ui/Camara.tsx`) y el visor
+muestra el rótulo **antes** de disparar, con la misma función que lo dibuja al
+exportar: si dice el punto equivocado, se ve cuando todavía se puede arreglar.
+
+**El rótulo no se hornea en los píxeles** (`media/rotulo.ts`). La foto guardada
+queda limpia y el rótulo se dibuja encima al mostrarla y al exportarla:
+
+- Si el punto estaba mal y se corrige, el rótulo se corrige solo. Con el texto
+  quemado en la imagen habría que volver a terreno.
+- No se duplica el peso, y las fotos ya son lo más pesado del dispositivo.
+- La foto original, sin retocar, sigue siendo la que respalda el informe.
+
+Al exportar salen **las dos versiones**, que es lo que pidió terreno:
+`fotos/rotuladas/` para el informe y `fotos/limpias/` por si el rótulo fallara.
+El nombre del archivo también es dato —`EMF44_2026-09-04_1034_Chucao_1.jpg`—
+así que la carpeta ordenada alfabéticamente queda ordenada por punto y por hora.
+
+Qué dice el rótulo se elige sobre el mismo catálogo de campos de exportación: no
+hay un vocabulario nuevo. Por defecto son las cinco líneas de una pizarra de
+terreno —punto, fecha, hora, UTM y proyecto—; más no se leen en una foto y tapan
+el sujeto.
+
+**Dos costos de la cámara propia, dichos en voz alta.** La foto sale peor que
+con la app del teléfono, que hace HDR y apilado de cuadros; y el cuadro nace en
+un canvas, sin EXIF. La posición y la hora no se pierden —las pone la app, que
+las tiene mejores— pero el rumbo sí, y el rumbo es lo que usa J.17 para separar
+las tomas de orientación de las de especies, así que se intenta leer la brújula
+del dispositivo. Por eso **la cámara propia no reemplaza a la del teléfono, se
+suma**: sirve para lo que antes hacía la pizarra, y la nativa sigue disponible
+para la foto de la especie, donde la calidad manda. El rótulo se dibuja igual
+sobre las dos.
+
+`getUserMedia` sólo existe en contexto seguro: en `localhost` funciona, contra
+la IP del computador desde el celular no. Una razón más para publicar en HTTPS.
+
 ## J.17 Pasar la jornada de una vez
 
 **El problema.** El trabajo lento no es el terreno: es llegar a la casa, ordenar

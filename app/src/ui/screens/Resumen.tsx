@@ -18,6 +18,7 @@ import { tallyBySpecies } from '../../quality/report';
 import { retryFailed } from '../../sync/engine';
 import { useStore } from '../../state/store';
 import { downloadBlob, zip } from '../download';
+import { empaquetarFotos, fotosDe } from '../../export/fotos';
 
 /** Sin backend configurado la app queda offline a propósito: nada se pierde. */
 function transportFor(endpoint: string | null) {
@@ -398,7 +399,22 @@ export function Resumen() {
             });
             downloadBlob(await zip(archive), `ProTerr_DwC-A_${today}.zip`);
           }}>Darwin Core Archive</button>
+
+          <button className="btn" onClick={async () => {
+            const { records } = await collect();
+            const media = new Map((await db.media.toArray()).map((m) => [m.id, m]));
+            const fotos = fotosDe(records, media);
+            if (!fotos.length) { s.notify('No hay fotografías guardadas todavía.', 'warn'); return; }
+            s.notify(`Rotulando ${fotos.length} fotografía${fotos.length === 1 ? '' : 's'}…`);
+            downloadBlob(await zip(await empaquetarFotos(fotos)), `ProTerr_fotos_${today}.zip`);
+          }}>Fotografías rotuladas</button>
         </div>
+        <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>
+          Las fotografías salen en dos carpetas: <strong>rotuladas</strong> con el punto, la
+          fecha y la coordenada dibujados encima, y <strong>limpias</strong> tal como se
+          tomaron. El rótulo se dibuja al exportar, así que sale con el punto corregido si
+          hubo que corregirlo.
+        </p>
         <ConservationCoverage />
       </section>
     </>

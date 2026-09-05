@@ -12,10 +12,11 @@ export function downloadBlob(blob: Blob, fileName: string): void {
 /**
  * Empaqueta el Darwin Core Archive en un .zip.
  *
- * Se usa CompressionStream, disponible en el navegador sin dependencias: en
- * terreno no se puede contar con descargar una librería de compresión.
+ * Se arma a mano, sin dependencias: en terreno no se puede contar con
+ * descargar una librería de compresión. Acepta texto y bytes, porque el mismo
+ * empaquetador sirve para las tablas del archivo y para las fotografías.
  */
-export async function zip(files: Record<string, string>): Promise<Blob> {
+export async function zip(files: Record<string, string | Uint8Array<ArrayBuffer>>): Promise<Blob> {
   const encoder = new TextEncoder();
   const entries: Array<{ name: Uint8Array<ArrayBuffer>; data: Uint8Array<ArrayBuffer>; crc: number; offset: number }> = [];
   const chunks: Uint8Array<ArrayBuffer>[] = [];
@@ -23,7 +24,8 @@ export async function zip(files: Record<string, string>): Promise<Blob> {
 
   for (const [name, content] of Object.entries(files)) {
     const nameBytes = encoder.encode(name) as Uint8Array<ArrayBuffer>;
-    const data = encoder.encode(content) as Uint8Array<ArrayBuffer>;
+    // Las fotos ya vienen en bytes; el texto hay que codificarlo.
+    const data = typeof content === 'string' ? encoder.encode(content) as Uint8Array<ArrayBuffer> : content;
     const crc = crc32(data);
     const local = new Uint8Array(30 + nameBytes.length);
     const view = new DataView(local.buffer);
