@@ -21,6 +21,8 @@ import {
 import { analyzeWorkbook, type ImportPreview } from '../../import/planilla';
 import { readKmlFile, toStationCandidates, type StationCandidate } from '../../geo/kml';
 import { useStore } from '../../state/store';
+import { proveedorSimulado, setProveedorAds, SIN_ADS } from '../../licence/ads';
+import { activarPago, registrarApertura, reiniciarLicencia } from '../../licence/licencia';
 import type { MethodCode } from '../../domain/types';
 import { requirementFor, type RequirableField, type Requirement } from '../../validation/profiles';
 import { METHOD_LABELS } from './Terreno';
@@ -450,7 +452,56 @@ export function Ajustes() {
           </div>
         )}
       </section>
+
+      <LicenciaPruebas />
     </>
+  );
+}
+
+/**
+ * Banco de pruebas de la licencia. Sólo existe en desarrollo: en la app
+ * publicada este bloque no se compila, porque un botón que abre la jornada
+ * gratis sería exactamente el agujero que el ciclo intenta cerrar.
+ */
+function LicenciaPruebas() {
+  const s = useStore();
+  const [ads, setAds] = useState(false);
+  if (!import.meta.env.DEV) return null;
+
+  async function refrescar(mensaje: string) {
+    await s.refreshAcceso();
+    s.notify(mensaje);
+  }
+
+  return (
+    <section className="card">
+      <h2>Licencia (sólo en desarrollo)</h2>
+      <p className="muted" style={{ marginTop: 0, fontSize: 13 }}>
+        Estado: <strong>{s.acceso?.motivo ?? 'sin consultar'}</strong>
+        {s.acceso ? ` · jornada ${s.acceso.jornada} · día ${s.acceso.ciclo.posicion + 1} de 7` : ''}
+        {s.acceso && s.acceso.diasAcreditados > 0 ? ` · ${s.acceso.diasAcreditados} liberados` : ''}
+      </p>
+      <div className="row">
+        <button className="btn" onClick={() => {
+          setProveedorAds(ads ? SIN_ADS : proveedorSimulado({ segundos: 600 }));
+          setAds(!ads);
+          s.notify(ads ? 'Videos apagados.' : 'Videos simulados encendidos: 10 min cada uno.');
+        }}>{ads ? 'Apagar videos' : 'Encender videos simulados'}</button>
+        <button className="btn" onClick={() => void (async () => {
+          await activarPago(30);
+          await refrescar('Suscripción simulada por 30 días.');
+        })()}>Simular pago</button>
+        <button className="btn danger" onClick={() => void (async () => {
+          await reiniciarLicencia();
+          await registrarApertura();
+          await refrescar('Licencia reiniciada: el ciclo arranca hoy.');
+        })()}>Reiniciar ciclo</button>
+      </div>
+      <p className="muted" style={{ margin: '10px 0 0', fontSize: 13 }}>
+        Para ver la puerta: reinicia el ciclo y después adelanta la fecha del
+        computador dos días. El ciclo se cuenta por fecha, no por sesiones.
+      </p>
+    </section>
   );
 }
 
