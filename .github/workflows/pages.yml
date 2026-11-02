@@ -1,0 +1,63 @@
+# Publica ProTerr en GitHub Pages.
+#
+# Hace falta HTTPS de verdad, no localhost: el navegador bloquea micrófono,
+# cámara y GPS fuera de un contexto seguro, y sin eso la app no sirve en
+# terreno. Un dominio propio vendrá después; esto es lo que se puede tener hoy
+# sin pagar nada.
+#
+# Se compila con base relativa porque el sitio no vive en la raíz del dominio
+# sino en /ProTerr/.
+name: Publicar en GitHub Pages
+
+on:
+  push:
+    branches: [claude/mobile-fauna-field-app-d3xwl0]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Una publicación a la vez; si llega otra mientras corre, manda la nueva.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  compilar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - run: npm ci
+        working-directory: app
+
+      # Las pruebas corren antes de publicar: nadie sale a terreno con una
+      # versión que no pasó.
+      - run: npm test
+        working-directory: app
+
+      - run: npx vite build --base=./
+        working-directory: app
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: app/dist
+
+  publicar:
+    needs: compilar
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
