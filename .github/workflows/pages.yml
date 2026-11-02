@@ -47,7 +47,12 @@ jobs:
       - run: npx vite build --base=./
         working-directory: app
 
+      # enablement activa Pages solo la primera vez. Sin esto habría que
+      # entrar a Settings → Pages del repositorio a mano, que desde un teléfono
+      # en terreno es justo lo que no se puede pedir.
       - uses: actions/configure-pages@v5
+        with:
+          enablement: true
       - uses: actions/upload-pages-artifact@v3
         with:
           path: app/dist
