@@ -256,6 +256,41 @@ describe('reconocimiento de encabezados ajenos', () => {
     expect(guessField('Columna interna 47').fieldId).toBeNull();
     expect(guessField('').fieldId).toBeNull();
   });
+
+  it('el nombre de la columna es lo que va antes de los dos puntos', () => {
+    // Poner los valores posibles en el propio encabezado es costumbre de
+    // terreno, y el texto de ejemplo es tan largo que ahogaba la coincidencia.
+    expect(guessField('Registro: Individuo, feca, vocalización, etc').fieldId)
+      .toBe('occurrence.recordType');
+  });
+
+  it('no confunde el tipo de registro con la clase de evidencia', () => {
+    // Las dos columnas conviven en la misma planilla y empiezan igual. La que
+    // dice Directo/Indirecto es la evidencia, no el tipo de registro.
+    expect(guessField('Tipo registro: Directo/Indirecto').fieldId)
+      .toBe('occurrence.evidenceKind');
+  });
+
+  it('reconoce el identificador Darwin Core de la estación', () => {
+    expect(guessField('ID Estación DwC (NO LLENAR)').fieldId)
+      .toBe('station.darwinCoreLocationId');
+  });
+
+  it('un identificador Darwin Core que no reconoce queda vacío, no adivinado', () => {
+    // "ID Temporada DwC" se parecía lo justo a "Temporada" para quedar mapeado
+    // a la temporada, y la columna del identificador habría salido con la
+    // palabra "Primavera" dentro. Un identificador equivocado es peor que
+    // ninguno: vale más que la persona lo asigne a mano si corresponde.
+    expect(guessField('ID Temporada DwC (NO LLENAR)').fieldId).toBeNull();
+  });
+
+  it('reconoce la fecha de instalación de cámaras y líneas de trampeo', () => {
+    expect(guessField('Fecha instalación').fieldId).toBe('site.installedOn');
+  });
+
+  it('reconoce la subespecie escrita en dos palabras', () => {
+    expect(guessField('sub especie').fieldId).toBe('taxon.infraspecificEpithet');
+  });
 });
 
 describe('exportación Darwin Core', () => {

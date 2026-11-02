@@ -261,8 +261,29 @@ export function guessField(header: string): HeaderMatch {
   const sinNota = header.replace(/\([^)]*\)/g, ' ');
   const directo = matchHeader(fold(header));
   if (directo.confidence >= 1) return directo;
+
   const limpio = matchHeader(fold(sinNota));
-  return limpio.confidence > directo.confidence ? limpio : directo;
+  let best = limpio.confidence > directo.confidence ? limpio : directo;
+
+  // El otro hábito: poner los valores posibles después de dos puntos, como en
+  // "Registro: Individuo, feca, vocalización, etc". El nombre de la columna es
+  // lo que va antes; lo de después son ejemplos, y es tan largo que ahogaba la
+  // coincidencia. Se prueba al final para no pisar un calce exacto del
+  // encabezado completo ("Tipo registro: Directo/Indirecto" ya resuelve solo).
+  const antesDeDosPuntos = sinNota.split(':')[0];
+  if (antesDeDosPuntos.trim() && antesDeDosPuntos.length < sinNota.length) {
+    const corto = matchHeader(fold(antesDeDosPuntos));
+    if (corto.confidence > best.confidence) best = corto;
+  }
+
+  // Un identificador Darwin Core no se adivina. "ID Temporada DwC" se parecía
+  // lo justo a "Temporada" para quedar mapeado a la temporada, y así la columna
+  // del identificador habría salido con la palabra "Primavera" dentro. Vale
+  // mucho más dejarla vacía y que la persona la mapee a mano si corresponde.
+  if (best.confidence < 1 && /\bdwc\b|darwin core/i.test(header)) {
+    return { fieldId: null, confidence: 0 };
+  }
+  return best;
 }
 
 function matchHeader(q: string): HeaderMatch {

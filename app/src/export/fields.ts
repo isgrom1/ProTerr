@@ -79,6 +79,7 @@ export const EXPORT_FIELDS: ExportField[] = [
   { id: 'campaign.name', label: 'Campaña', group: 'Estación', aliases: ['campana', 'campaña'], resolve: (r) => blank(r.campaign?.name) },
   { id: 'campaign.season', label: 'Temporada', group: 'Estación', aliases: ['temporada', 'estacion del ano', 'season'], resolve: (r) => blank(r.campaign?.season ?? r.station?.season) },
   { id: 'station.code', label: 'ID Estación', group: 'Estación', aliases: ['id estacion', 'estacion', 'codigo estacion', 'punto', 'sitio', 'transecto', 'station'], resolve: (r) => blank(r.station?.stationCode) },
+  { id: 'station.darwinCoreLocationId', label: 'ID Estación DwC', group: 'Estación', aliases: ['id estacion dwc', 'locationid', 'location id', 'id localidad dwc'], resolve: (r) => blank(r.station?.darwinCoreLocationId) },
   { id: 'station.finalCode', label: 'ID Final Estación', group: 'Estación', aliases: ['id final estacion', 'id estacion final', 'codigo final'], resolve: (r) => blank(r.station?.finalStationCode) },
   { id: 'station.sector', label: 'Sector', group: 'Estación', aliases: ['sector', 'localidad', 'zona', 'area de estudio', 'unidad territorial'], resolve: (r) => blank(r.station?.sector) },
   { id: 'station.region', label: 'Región', group: 'Estación', aliases: ['region', 'provincia', 'state province'], resolve: (r) => blank(r.station?.region ?? r.project?.region) },
@@ -114,6 +115,7 @@ export const EXPORT_FIELDS: ExportField[] = [
   { id: 'occurrence.organismId', label: 'Código del individuo', group: 'Registro', aliases: ['codigo individuo', 'marca', 'anillo', 'chip', 'organism id'], resolve: (r) => blank(r.occurrence.organismId) },
   { id: 'occurrence.reproductiveCondition', label: 'Condición reproductiva', group: 'Registro', aliases: ['condicion reproductiva', 'conducta reprod', 'condicion reprod', 'estado reproductivo', 'reproductive condition'], resolve: (r) => blank(r.occurrence.reproductiveCondition) },
   { id: 'occurrence.trapNumber', label: 'N° de trampa', group: 'Registro', aliases: ['n de trampa', 'numero de trampa', 'trampa', 'trap number'], resolve: (r) => blank(r.occurrence.trapNumber) },
+  { id: 'site.installedOn', label: 'Fecha instalación', group: 'Estación', aliases: ['fecha instalacion', 'fecha de instalacion', 'instalacion', 'fecha instalada'], resolve: (r) => blank(r.site?.installedOn) },
   { id: 'occurrence.site', label: 'Punto o línea', group: 'Registro', aliases: ['punto de playback', 'linea', 'nombre pb', 'nombre linea', 'sitio', 'id tecnica', 'id de tecnica', 'codigo tecnica'], resolve: (r) => blank(r.site?.name) },
   { id: 'occurrence.recapture', label: 'Recaptura', group: 'Registro', aliases: ['recaptura'], resolve: (r) => yesNo(r.occurrence.recapture) },
   { id: 'occurrence.utmEast', label: 'UTM E del avistamiento', group: 'Registro', aliases: ['utm e captura', 'utm e captura x', 'este captura', 'utm e avistamiento', 'utm e', 'e utm', 'utm este'], resolve: (r) => (r.occurrence.occurrenceFix ? blank(coordinatesOf(r).utmEast) : '') },
@@ -134,7 +136,7 @@ export const EXPORT_FIELDS: ExportField[] = [
   { id: 'taxon.family', label: 'Familia', group: 'Taxonomía', aliases: ['familia', 'family'], resolve: (r) => blank(r.taxon?.family) },
   { id: 'taxon.genus', label: 'Género', group: 'Taxonomía', aliases: ['genero', 'genus'], resolve: (r) => blank(r.taxon?.genus) },
   { id: 'taxon.specificEpithet', label: 'Epíteto específico', group: 'Taxonomía', aliases: ['epiteto especifico', 'specific epithet', 'especie epiteto'], resolve: (r) => blank(r.taxon?.specificEpithet) },
-  { id: 'taxon.infraspecificEpithet', label: 'Epíteto infraespecífico', group: 'Taxonomía', aliases: ['epiteto infraespecifico', 'subespecie', 'infraspecific epithet'], resolve: (r) => blank(r.taxon?.infraspecificEpithet) },
+  { id: 'taxon.infraspecificEpithet', label: 'Epíteto infraespecífico', group: 'Taxonomía', aliases: ['epiteto infraespecifico', 'subespecie', 'sub especie', 'infraspecific epithet'], resolve: (r) => blank(r.taxon?.infraspecificEpithet) },
   { id: 'taxon.rank', label: 'Rango taxonómico', group: 'Taxonomía', aliases: ['rango', 'taxon rank', 'nivel taxonomico'], resolve: (r) => blank(r.taxon?.taxonRank) },
 
   // --- Vuelo (tránsito aéreo) ---
