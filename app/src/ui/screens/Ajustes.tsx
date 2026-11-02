@@ -526,6 +526,11 @@ function TemplateReview({ detection, name, onName, organization, onOrganization,
   const unmapped = usable.reduce((n, sh) => n + sh.columns.filter((c) => !c.fieldId).length, 0);
   const total = usable.reduce((n, sh) => n + sh.columns.length, 0);
   const sinColumna = fieldsWithoutColumn(detection);
+  // Qué hojas se abrieron columna por columna. Cerradas por omisión: una
+  // planilla real trae 133 columnas y revisarlas en un teléfono, antes de
+  // salir a terreno, es tiempo que nadie tiene.
+  const [abiertas, setAbiertas] = useState<string[]>([]);
+  const abrir = (n: string) => setAbiertas((a) => (a.includes(n) ? a.filter((x) => x !== n) : [...a, n]));
 
   return (
     <div style={{ marginTop: 12 }}>
@@ -545,12 +550,19 @@ function TemplateReview({ detection, name, onName, organization, onOrganization,
         <span className="chip ok">{total - unmapped} de {total} columnas reconocidas</span>{' '}
         {unmapped > 0 && <span className="chip warn">{unmapped} sin asignar</span>}
       </p>
-      {unmapped > 0 && (
-        <p className="muted" style={{ fontSize: 12 }}>
-          Las columnas sin asignar saldrán vacías. Empareja las que importen; es preferible
-          una columna vacía a una con el dato equivocado.
-        </p>
-      )}
+
+      {/* Guardar va ARRIBA. Estaba al final de las 133 columnas, así que para
+          aceptar lo que la app ya había reconocido bien había que recorrerlas
+          todas. En terreno eso no se hace: se abandona. */}
+      <div className="row" style={{ marginBottom: 10 }}>
+        <button className="btn primary" onClick={onSave}>Guardar plantilla</button>
+        <button className="btn ghost" onClick={onCancel}>Cancelar</button>
+      </div>
+      <p className="muted" style={{ fontSize: 12, marginTop: 0 }}>
+        Puedes guardar así y revisar después: cambiar la plantilla no toca los registros ya
+        guardados. {unmapped > 0 && <>Las {unmapped} sin asignar saldrán vacías, que es preferible
+        a una columna con el dato equivocado.</>}
+      </p>
 
       {/* Lo que la app va a recoger en terreno y esta planilla no tiene dónde
           escribir. No es un error, pero hay que verlo antes de guardar. */}
@@ -579,7 +591,11 @@ function TemplateReview({ detection, name, onName, organization, onOrganization,
                 {/* La planilla decorada es la norma: logos, cliente y código
                     arriba. Si la detección falla, se elige a mano. */}
                 <select value={sheet.headerRow ?? ''}
-                  onChange={(e) => onSheet(sheet.name, { headerRow: Number(e.target.value) })}>
+                  onChange={(e) => onSheet(sheet.name, {
+                    headerRow: e.target.value === 'auto' ? undefined : Number(e.target.value),
+                  })}>
+                  {/* Sin esta opción, elegir mal la fila no tenía vuelta atrás. */}
+                  <option value="auto">Volver a detectarla sola</option>
                   {sheet.candidateRows.map((r) => (
                     <option key={r.row} value={r.row}>Fila {r.row} — {r.preview}</option>
                   ))}
@@ -599,14 +615,43 @@ function TemplateReview({ detection, name, onName, organization, onOrganization,
             ? <p className="muted" style={{ fontSize: 12, margin: '4px 0 0' }}>
                 No se usa (instrucciones, listas de validación u hoja sin encabezado reconocible).
               </p>
-            : (
-              <div className="matrix" style={{ marginTop: 6 }}>
-                {sheet.columns.map((c) => (
-                  <FragmentRow key={c.index} column={c}
-                    onChange={(fieldId) => onColumn(sheet.name, c.index, fieldId)} />
-                ))}
-              </div>
-            )}
+            : (() => {
+              // Lo que de verdad hay que mirar: lo que no reconoció y lo que
+              // reconoció con poca confianza. El umbral es bajo a propósito:
+              // un calce por contener el alias ("UTM E inicio línea" → UTM E
+              // inicio) ronda 0,75 y casi siempre es correcto. Marcarlo
+              // llenaba la revisión de columnas que estaban bien, que es otra
+              // forma de la misma lista inabarcable.
+              const atencion = sheet.columns.filter((c) => !c.fieldId || c.confidence < 0.7);
+              const todo = abiertas.includes(sheet.name);
+              const mostradas = todo ? sheet.columns : atencion;
+              return (
+                <>
+                  <p className="muted" style={{ fontSize: 12, margin: '6px 0' }}>
+                    {sheet.columns.length - sheet.columns.filter((c) => !c.fieldId).length} de{' '}
+                    {sheet.columns.length} reconocidas
+                    {atencion.length > 0 && <> · {atencion.length} por revisar</>}
+                  </p>
+                  {mostradas.length > 0 && (
+                    <div className="matrix" style={{ marginTop: 6 }}>
+                      {mostradas.map((c) => (
+                        <FragmentRow key={c.index} column={c}
+                          onChange={(fieldId) => onColumn(sheet.name, c.index, fieldId)} />
+                      ))}
+                    </div>
+                  )}
+                  {!todo && atencion.length === 0 && (
+                    <p className="muted" style={{ fontSize: 12, margin: '4px 0' }}>
+                      Todas reconocidas sin dudas.
+                    </p>
+                  )}
+                  <button className="btn ghost" style={{ marginTop: 6 }}
+                    onClick={() => abrir(sheet.name)}>
+                    {todo ? 'Mostrar sólo lo que falta' : `Ver las ${sheet.columns.length} columnas`}
+                  </button>
+                </>
+              );
+            })()}
         </div>
       ))}
 
