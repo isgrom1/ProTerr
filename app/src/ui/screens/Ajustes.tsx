@@ -12,7 +12,7 @@ import {
   nominaCargada, setEndpoint,
 } from '../../conservation/lookup';
 import { leerNomina, resumirNomina } from '../../conservation/nomina';
-import { Icono } from '../Icono';
+import { Icono, ICONO_METODO } from '../Icono';
 import { MODOS, readModo, setModo, type Modo } from '../modo';
 import {
   fieldsWithoutColumn, toTemplate, detectTemplate,
@@ -23,9 +23,10 @@ import { readKmlFile, toStationCandidates, type StationCandidate } from '../../g
 import { useStore } from '../../state/store';
 import { proveedorSimulado, setProveedorAds, SIN_ADS } from '../../licence/ads';
 import { activarPago, registrarApertura, reiniciarLicencia } from '../../licence/licencia';
-import type { MethodCode } from '../../domain/types';
+import type { MethodCode, Project } from '../../domain/types';
 import { requirementFor, type RequirableField, type Requirement } from '../../validation/profiles';
 import { METHOD_LABELS } from './Terreno';
+import { METHOD_LABEL } from '../../export/fields';
 
 const FIELDS: Array<[RequirableField, string]> = [
   ['eventDate', 'Fecha'], ['eventTime', 'Hora'], ['station', 'Estación'], ['method', 'Metodología'],
@@ -79,6 +80,8 @@ export function Ajustes() {
 
   return (
     <>
+      <ProyectoCard />
+
       <section className="card">
         <h2>Observador</h2>
         <div className="field">
@@ -678,6 +681,223 @@ function FieldRow({ label, value, onChange }: { label: string; value: Requiremen
       <select value={value} onChange={(e) => onChange(e.target.value as Requirement)}>
         {LEVELS.map((l) => <option key={l} value={l}>{LEVEL_LABEL[l]}</option>)}
       </select>
+    </>
+  );
+}
+
+
+/**
+ * Proyecto y campañas.
+ *
+ * Es lo primero que hay que poner y hasta ahora no se podía: la app venía con
+ * un proyecto de demostración y no había forma de cambiarlo, lo que la dejaba
+ * inservible para un trabajo real.
+ *
+ * El huso UTM no es un detalle de formulario: con él se convierten TODAS las
+ * coordenadas, las del GPS, las del KMZ importado y las que salen en el rótulo
+ * de las fotos. Chile cruza los husos 18 y 19; ponerlo mal desplaza cada punto
+ * cientos de kilómetros.
+ */
+function ProyectoCard() {
+  const s = useStore();
+  const proyecto = s.projects.find((p) => p.id === s.projectId) ?? null;
+  const [editando, setEditando] = useState<Project | null>(null);
+  const campanas = s.campaigns.filter((c) => c.projectId === s.projectId);
+  const [nuevaCampana, setNuevaCampana] = useState('');
+  const [temporada, setTemporada] = useState('Primavera');
+
+  function nuevo(): Project {
+    return {
+      id: `proj_${Date.now().toString(36)}`,
+      code: '', name: '', client: null, region: null,
+      utmZone: 19, utmHemisphere: 'S', geodeticDatum: 'WGS84',
+      requirementProfileId: proyecto?.requirementProfileId ?? 'linea-base-fauna',
+      methods: proyecto?.methods ?? ['transecto', 'playback_aves', 'camara_trampa', 'trampa_sherman'],
+    };
+  }
+
+  return (
+    <section className="card">
+      <h2>Proyecto</h2>
+
+      {!editando && (
+        <>
+          <div className="field">
+            <label htmlFor="proj">En cuál estás trabajando</label>
+            <select id="proj" value={s.projectId ?? ''} onChange={(e) => s.select({ projectId: e.target.value })}>
+              {s.projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+          </div>
+
+          {proyecto && (
+            <p className="muted" style={{ fontSize: 13, margin: '0 0 10px' }}>
+              Código <b>{proyecto.code}</b> · UTM {proyecto.utmZone}{proyecto.utmHemisphere} · {proyecto.geodeticDatum}
+              {proyecto.client ? <> · {proyecto.client}</> : null}
+            </p>
+          )}
+
+          <div className="row">
+            <button className="btn" onClick={() => setEditando(proyecto ? { ...proyecto } : nuevo())}>
+              {proyecto ? 'Editar este proyecto' : 'Crear proyecto'}
+            </button>
+            <button className="btn" onClick={() => setEditando(nuevo())}>Proyecto nuevo</button>
+          </div>
+
+          {proyecto && (
+            <>
+              <h3 style={{ fontSize: 14, margin: '18px 0 6px' }}>Campañas</h3>
+              {campanas.length === 0 && (
+                <p className="muted" style={{ fontSize: 13, marginTop: 0 }}>
+                  Todavía no hay ninguna. Una campaña es la salida a terreno: «Primavera 2026».
+                </p>
+              )}
+              {campanas.map((c) => (
+                <div className="row" key={c.id} style={{ alignItems: 'center', marginBottom: 6 }}>
+                  <span>{c.name} <span className="muted">· {c.season}</span></span>
+                  <button className="btn ghost" style={{ flex: '0 0 auto' }}
+                    onClick={() => void s.deleteCampaign(c.id)}>Quitar</button>
+                </div>
+              ))}
+
+              <div className="row" style={{ marginTop: 8 }}>
+                <input type="text" placeholder="Primavera 2026" value={nuevaCampana}
+                  onChange={(e) => setNuevaCampana(e.target.value)} />
+                <select value={temporada} onChange={(e) => setTemporada(e.target.value)} style={{ flex: '0 0 130px' }}>
+                  {['Primavera', 'Verano', 'Otoño', 'Invierno'].map((t) => <option key={t}>{t}</option>)}
+                </select>
+                <button className="btn" style={{ flex: '0 0 auto' }} disabled={!nuevaCampana.trim()}
+                  onClick={() => {
+                    void s.saveCampaign({
+                      id: `camp_${Date.now().toString(36)}`, projectId: proyecto.id,
+                      name: nuevaCampana.trim(), season: temporada,
+                    });
+                    setNuevaCampana('');
+                  }}>Agregar</button>
+              </div>
+
+              <p className="muted" style={{ fontSize: 12, marginTop: 14 }}>
+                Las estaciones de este proyecto se cargan más abajo, desde el KML o KMZ.
+              </p>
+              <button className="btn danger" style={{ marginTop: 6 }}
+                onClick={() => void s.deleteProject(proyecto.id)}>
+                Borrar este proyecto
+              </button>
+              <p className="muted" style={{ fontSize: 12, marginTop: 6 }}>
+                Se lleva sus campañas y estaciones. Si ya tiene registros de terreno, no se borra.
+              </p>
+            </>
+          )}
+        </>
+      )}
+
+      {editando && (
+        <EditorProyecto
+          valor={editando}
+          onCambio={setEditando}
+          onCancelar={() => setEditando(null)}
+          onGuardar={async () => {
+            await s.saveProject({
+              ...editando,
+              name: editando.name.trim(),
+              code: (editando.code.trim() || editando.name.trim()).toUpperCase().replace(/\s+/g, '-'),
+              client: editando.client?.trim() || null,
+              region: editando.region?.trim() || null,
+            });
+            setEditando(null);
+          }}
+        />
+      )}
+    </section>
+  );
+}
+
+const DATUMS = ['WGS84', 'SIRGAS-Chile', 'PSAD56', 'SAD69'];
+
+function EditorProyecto({ valor, onCambio, onGuardar, onCancelar }: {
+  valor: Project;
+  onCambio: (p: Project) => void;
+  onGuardar: () => Promise<void>;
+  onCancelar: () => void;
+}) {
+  const set = (patch: Partial<Project>) => onCambio({ ...valor, ...patch });
+
+  return (
+    <>
+      <div className="field">
+        <label htmlFor="pnom">Nombre del proyecto</label>
+        <input id="pnom" type="text" value={valor.name} placeholder="Línea base de fauna Quilapilún"
+          onChange={(e) => set({ name: e.target.value })} />
+      </div>
+
+      <div className="field">
+        <label htmlFor="pcod">Código</label>
+        <input id="pcod" type="text" value={valor.code} placeholder="QUILAPILUN-2026"
+          onChange={(e) => set({ code: e.target.value })} />
+      </div>
+      <p className="muted" style={{ fontSize: 12, marginTop: -4 }}>
+        Va en el identificador de cada registro. Déjalo corto y no lo cambies después:
+        los registros ya guardados conservan el que tenían.
+      </p>
+
+      <div className="row">
+        <div className="field">
+          <label htmlFor="pcli">Mandante</label>
+          <input id="pcli" type="text" value={valor.client ?? ''} placeholder="Opcional"
+            onChange={(e) => set({ client: e.target.value })} />
+        </div>
+        <div className="field">
+          <label htmlFor="preg">Región</label>
+          <input id="preg" type="text" value={valor.region ?? ''} placeholder="Metropolitana"
+            onChange={(e) => set({ region: e.target.value })} />
+        </div>
+      </div>
+
+      <div className="row">
+        <div className="field">
+          <label htmlFor="phus">Huso UTM</label>
+          <select id="phus" value={valor.utmZone} onChange={(e) => set({ utmZone: Number(e.target.value) })}>
+            <option value={18}>18 — oeste</option>
+            <option value={19}>19 — la mayor parte de Chile</option>
+          </select>
+        </div>
+        <div className="field">
+          <label htmlFor="pdat">Datum</label>
+          <select id="pdat" value={valor.geodeticDatum} onChange={(e) => set({ geodeticDatum: e.target.value })}>
+            {DATUMS.map((d) => <option key={d}>{d}</option>)}
+          </select>
+        </div>
+      </div>
+      <p className="muted" style={{ fontSize: 12, marginTop: -4 }}>
+        Con el huso se convierten todas las coordenadas: el GPS, el KMZ que importes y las que
+        salen en el rótulo de las fotos. Equivocarlo mueve cada punto cientos de kilómetros.
+      </p>
+
+      <h3 style={{ fontSize: 14, margin: '16px 0 6px' }}>Metodologías de este proyecto</h3>
+      <p className="muted" style={{ fontSize: 13, marginTop: 0 }}>
+        Sólo las que marques aparecen en la pantalla de terreno.
+      </p>
+      <div className="methods" style={{ flexWrap: 'wrap' }}>
+        {(Object.keys(METHOD_LABEL) as MethodCode[]).map((m) => {
+          const activa = valor.methods.includes(m);
+          return (
+            <button key={m} type="button" className="method" aria-pressed={activa}
+              style={{ flex: '0 0 auto' }}
+              onClick={() => set({
+                methods: activa ? valor.methods.filter((x) => x !== m) : [...valor.methods, m],
+              })}>
+              <span className="glyph" aria-hidden><Icono name={ICONO_METODO[m] ?? 'otro'} /></span>
+              {METHOD_LABEL[m]}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="row" style={{ marginTop: 14 }}>
+        <button className="btn primary" disabled={!valor.name.trim()} onClick={() => void onGuardar()}>
+          Guardar proyecto
+        </button>
+        <button className="btn ghost" onClick={onCancelar}>Cancelar</button>
+      </div>
     </>
   );
 }

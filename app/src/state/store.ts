@@ -153,6 +153,13 @@ interface State {
   selectTemplate(id: string): void;
   saveTemplate(template: ExportTemplate): Promise<void>;
   deleteTemplate(id: string): Promise<void>;
+
+  /** Proyecto y campañas: lo primero que hay que poner para trabajar de verdad. */
+  saveProject(project: Project): Promise<void>;
+  saveCampaign(campaign: Campaign): Promise<void>;
+  deleteCampaign(id: string): Promise<void>;
+  /** Borra un proyecto vacío. Devuelve false y explica si tiene registros. */
+  deleteProject(id: string): Promise<boolean>;
 }
 
 const DEVICE_KEY = 'proterr.deviceId';
@@ -763,6 +770,66 @@ export const useStore = create<State>((set, get) => ({
     set({ templates: await db.templates.toArray(), templateId: template.id });
     globalThis.localStorage?.setItem('proterr.templateId', template.id);
     get().notify(`Plantilla "${template.name}" guardada.`);
+  },
+
+  async saveProject(project) {
+    // Crear un proyecto es decir «voy a trabajar en éste»: se deja elegido.
+    // Editar el que ya estaba abierto no toca la selección.
+    const esNuevo = !get().projects.some((p) => p.id === project.id);
+    await db.projects.put(project);
+    set({ projects: await db.projects.toArray() });
+    if (esNuevo || !get().projectId) get().select({ projectId: project.id });
+    get().notify(`Proyecto "${project.name}" guardado.`);
+  },
+
+  async saveCampaign(campaign) {
+    await db.campaigns.put(campaign);
+    set({ campaigns: await db.campaigns.toArray() });
+    if (!get().campaignId && campaign.projectId === get().projectId) {
+      get().select({ campaignId: campaign.id });
+    }
+    get().notify(`Campaña "${campaign.name}" guardada.`);
+  },
+
+  async deleteCampaign(id) {
+    const usada = await db.events.where('campaignId').equals(id).count();
+    if (usada > 0) {
+      get().notify(`Esa campaña tiene ${usada} evento(s): no se borra.`, 'warn');
+      return;
+    }
+    await db.campaigns.delete(id);
+    set({ campaigns: await db.campaigns.toArray() });
+    if (get().campaignId === id) set({ campaignId: null });
+    get().notify('Campaña borrada.');
+  },
+
+  /**
+   * Sólo se borra un proyecto que no tenga registros. Las estaciones y campañas
+   * se van con él, porque sin proyecto no significan nada; los registros, no:
+   * un dato de terreno no se borra de rebote por limpiar una lista.
+   */
+  async deleteProject(id) {
+    const eventos = await db.events.where('projectId').equals(id).count();
+    if (eventos > 0) {
+      get().notify(`Ese proyecto tiene ${eventos} evento(s) de terreno: no se borra.`, 'error');
+      return false;
+    }
+    const campanas = await db.campaigns.where('projectId').equals(id).toArray();
+    const estaciones = await db.stations.where('projectId').equals(id).toArray();
+    await db.campaigns.bulkDelete(campanas.map((c) => c.id));
+    await db.stations.bulkDelete(estaciones.map((e) => e.id));
+    await db.projects.delete(id);
+
+    const [projects, campaigns, stations] = await Promise.all([
+      db.projects.toArray(), db.campaigns.toArray(), db.stations.toArray(),
+    ]);
+    set({ projects, campaigns, stations });
+    if (get().projectId === id) {
+      const siguiente = projects[0] ?? null;
+      set({ projectId: siguiente?.id ?? null, campaignId: null, stationId: null });
+    }
+    get().notify('Proyecto borrado.');
+    return true;
   },
 
   async deleteTemplate(id) {
