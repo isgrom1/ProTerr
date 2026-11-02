@@ -207,6 +207,17 @@ function DraftCard({ draft, index }: { draft: ObservationDraft; index: number })
                     </button>
                   </li>
                 ))}
+                {/* El catálogo de arranque no es la lista de especies de Chile.
+                    Quien está en terreno sabe lo que vio: se guarda su palabra
+                    y se identifica en gabinete, en vez de obligarlo a elegir
+                    una especie equivocada o a perder el registro. */}
+                <li>
+                  <button className="btn ghost" style={{ width: '100%', textAlign: 'left' }}
+                    onClick={() => { patch({ taxonId: null, taxonCandidates: [], verbatimTaxonText: query.trim() }); setQuery(''); }}>
+                    Usar «{query.trim()}» como nombre dictado
+                    <span className="sci">queda sin identificar, para resolver después</span>
+                  </button>
+                </li>
               </ul>
             )}
           </div>

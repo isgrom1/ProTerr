@@ -413,3 +413,37 @@ describe('catálogo de arranque', () => {
     expect(otro.observations[0].taxonIds).toEqual(uno.observations[0].taxonIds);
   });
 });
+
+describe('una especie fuera del catálogo no se pierde', () => {
+  /*
+   * Reportado desde terreno, en Atacama: dictó "platero" —que no está en el
+   * catálogo de arranque— y el dictado se descartó entero, con un aviso de
+   * "no se interpretó". El catálogo trae 257 especies y Chile tiene muchas
+   * más: perder lo que alguien dictó en un cerro, por no tener la especie en
+   * una lista, es el peor error posible de esta app.
+   */
+  it('guarda el nombre tal como se dijo', () => {
+    const r = parse('EMF09, un platero');
+    expect(r.observations).toHaveLength(1);
+    expect(r.observations[0].taxonIds).toEqual([]);
+    expect(r.observations[0].verbatimTaxonText).toBe('platero');
+    expect(r.warnings.join(' ')).toContain('platero');
+  });
+
+  it('conserva lo demás que sí entendió de la frase', () => {
+    const r = parse('EMF09, dos plateros posados');
+    expect(r.observations[0].individualCount).toBe(2);
+    expect(r.observations[0].behaviour).toBe('Posado');
+    expect(r.observations[0].verbatimTaxonText).toBe('plateros');
+  });
+
+  it('la cabecera del punto sigue sin inventar una especie', () => {
+    // "EMF01 transecto" es contexto, no un bicho llamado "transecto".
+    const r = parse('EMF01 transecto');
+    expect(r.observations).toHaveLength(0);
+  });
+
+  it('declarar una ausencia tampoco inventa una especie', () => {
+    expect(parse('sin detecciones aquí').observations).toHaveLength(0);
+  });
+});

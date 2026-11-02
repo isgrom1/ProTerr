@@ -156,6 +156,8 @@ interface State {
 
   /** Proyecto y campañas: lo primero que hay que poner para trabajar de verdad. */
   saveProject(project: Project): Promise<void>;
+  /** Devuelve la campaña del proyecto, creándola si no hay ninguna. */
+  ensureCampaign(projectId: string): Promise<string>;
   saveCampaign(campaign: Campaign): Promise<void>;
   deleteCampaign(id: string): Promise<void>;
   /** Borra un proyecto vacío. Devuelve false y explica si tiene registros. */
@@ -169,6 +171,85 @@ const LABEL: Record<string, string> = {
   individualCount: 'abundancia', sex: 'sexo', lifeStage: 'edad',
   behaviour: 'conducta', recordType: 'tipo de registro', organismCondition: 'estado',
 };
+
+/** Temporada del hemisferio sur, que es donde se usa esto. */
+function temporadaDe(d: Date): string {
+  const m = d.getMonth();
+  if (m <= 1 || m === 11) return 'Verano';
+  if (m <= 4) return 'Otoño';
+  if (m <= 7) return 'Invierno';
+  return 'Primavera';
+}
+
+/**
+ * Resuelve lo que falta para poder escribir y dice, con precisión, lo que no
+ * pudo resolver. El aviso anterior listaba las cuatro cosas —proyecto,
+ * campaña, estación y metodología— aunque faltara una sola, y en terreno eso
+ * obliga a adivinar cuál es.
+ */
+async function contextoParaEscribir(
+  get: () => State,
+): Promise<{ campaignId: string; stationId: string; method: MethodCode } | null> {
+  const { projectId, stationId, method, projects } = get();
+  const project = projects.find((p) => p.id === projectId);
+  if (!project) { get().notify('Primero crea un proyecto, en Ajustes.', 'warn'); return null; }
+
+  const campaignId = get().campaignId ?? await get().ensureCampaign(project.id);
+
+  // Sin estación elegida no se pierde el registro. Primero se mira si hay una
+  // del proyecto a menos de 150 m: estando parado en el punto, ésa es la que
+  // el consultor quiso decir. Si no hay ninguna cerca —ni cargadas—, se crea
+  // una con el GPS del momento, porque la coordenada y la hora sí son ciertas
+  // y el nombre del punto se arregla en gabinete. Lo dictado en un cerro no se
+  // tira por una etiqueta que falta.
+  let estacion = stationId;
+  if (!estacion) {
+    const { fix, stations, projects: ps } = get();
+    const project2 = ps.find((p) => p.id === projectId)!;
+    const delProyecto = stations.filter((st) => st.projectId === project2.id);
+    const cerca = fix ? suggestStations(fix, delProyecto, 150, 1)[0] : undefined;
+    if (cerca) {
+      estacion = cerca.station.id;
+      get().select({ stationId: estacion });
+      get().notify(`Sin estación elegida: uso ${cerca.station.stationCode}, a ${cerca.distanceMeters} m.`, 'warn');
+    } else if (fix) {
+      const nueva = await crearEstacionDesdeGps(fix, project2);
+      estacion = nueva.id;
+      useStore.setState({ stations: await db.stations.toArray() });
+      get().select({ stationId: estacion });
+      get().notify(`Sin estación elegida: creé ${nueva.stationCode} con el GPS. Cámbiala después si corresponde.`, 'warn');
+    }
+  }
+
+  const falta: string[] = [];
+  if (!estacion) falta.push('la estación (y no hay GPS para crear una)');
+  if (!method) falta.push('la metodología');
+  if (falta.length) {
+    get().notify(`Falta ${falta.join(' y ')}.`, 'warn');
+    return null;
+  }
+  return { campaignId, stationId: estacion!, method: method! };
+}
+
+/** Estación improvisada en la posición actual, nombrada por la hora. */
+async function crearEstacionDesdeGps(fix: GeoFix, project: Project): Promise<Station> {
+  const hora = new Date().toTimeString().slice(0, 5).replace(':', '');
+  const code = `PUNTO-${hora}`;
+  const utm = toUtm(fix.latitude, fix.longitude, project.utmZone);
+  const station: Station = {
+    id: `st_${code.toLowerCase()}_${Date.now().toString(36)}`,
+    projectId: project.id,
+    stationCode: code, finalStationCode: code,
+    darwinCoreLocationId: locationIdFor(project.code, code),
+    region: project.region ?? null, season: null, habitat: null, slopeAspect: null,
+    utmEast: utm.east, utmNorth: utm.north,
+    utmStartEast: null, utmStartNorth: null, utmEndEast: null, utmEndNorth: null,
+    latitude: fix.latitude, longitude: fix.longitude,
+    methods: project.methods, sites: [], recordedBy: null, identifiedBy: null,
+  };
+  await db.stations.put(station);
+  return station;
+}
 
 function deviceId(): string {
   const stored = globalThis.localStorage?.getItem(DEVICE_KEY);
@@ -262,6 +343,28 @@ export const useStore = create<State>((set, get) => ({
   notify(text, tone = 'ok') {
     set({ banner: { text, tone } });
     setTimeout(() => set((s) => (s.banner?.text === text ? { banner: null } : s)), 4000);
+  },
+
+  /**
+   * Una campaña es una etiqueta administrativa, y hasta ahora bloqueaba el
+   * registro: sin campaña no se podía guardar nada. Eso dejó a alguien parado
+   * en un punto, con el micrófono abierto, leyendo «selecciona proyecto,
+   * campaña, estación y metodología». Si el proyecto no tiene ninguna, se crea
+   * con la temporada que corresponde y se sigue; renombrarla es un toque.
+   */
+  async ensureCampaign(projectId) {
+    const existente = get().campaigns.find((c) => c.projectId === projectId);
+    if (existente) return existente.id;
+    const ahora = new Date();
+    const campaign = {
+      id: `camp_${Date.now().toString(36)}`,
+      projectId,
+      name: `${temporadaDe(ahora)} ${ahora.getFullYear()}`,
+      season: temporadaDe(ahora),
+    };
+    await db.campaigns.put(campaign);
+    set({ campaigns: await db.campaigns.toArray() });
+    return campaign.id;
   },
 
   select(patch) {
@@ -442,6 +545,12 @@ export const useStore = create<State>((set, get) => ({
       return;
     }
 
+    // Un borrador dictado antes de elegir la estación se queda sin ella y el
+    // guardado reventaba con una excepción sin mensaje. Se completa con lo que
+    // esté elegido ahora, que es lo que la persona quiso decir.
+    const ctx = await contextoParaEscribir(get);
+    if (!ctx) return;
+
     // Un solo lote para todo lo dictado junto: son observaciones distintas que
     // el usuario enumeró, no un guardado repetido.
     const batchId = uuid();
@@ -451,7 +560,13 @@ export const useStore = create<State>((set, get) => ({
       const v = validations[draft.draftId];
       if (v && !v.canSave) continue;
       const result = await commitDraft(
-        draft,
+        {
+          ...draft,
+          projectId: draft.projectId ?? project.id,
+          campaignId: draft.campaignId ?? ctx.campaignId,
+          stationId: draft.stationId ?? ctx.stationId,
+          method: draft.method ?? ctx.method,
+        },
         {
           projectCode: project.code,
           pendingFields: v?.pendingFields ?? [],
@@ -662,7 +777,7 @@ export const useStore = create<State>((set, get) => ({
       const station = get().stations.find((st) => st.id === event.stationId);
       if (station && station.slopeAspect !== header.slopeAspect) {
         await db.stations.put({ ...station, slopeAspect: header.slopeAspect });
-        set({ stations: await db.stations.toArray() });
+        useStore.setState({ stations: await db.stations.toArray() });
         hechos.push(`ladera ${header.slopeAspect.toLowerCase()}`);
       }
     }
@@ -693,12 +808,11 @@ export const useStore = create<State>((set, get) => ({
   },
 
   async recordNoDetections() {
-    const { projectId, campaignId, stationId, method, session, projects, fix } = get();
-    const project = projects.find((p) => p.id === projectId);
-    if (!project || !campaignId || !stationId || !method) {
-      get().notify('Selecciona proyecto, campaña, estación y metodología primero.', 'warn');
-      return;
-    }
+    const ctx = await contextoParaEscribir(get);
+    if (!ctx) return;
+    const { projectId, session, projects, fix } = get();
+    const { campaignId, stationId, method } = ctx;
+    const project = projects.find((p) => p.id === projectId)!;
     const now = new Date();
     const event = await getOrCreateEvent(
       {
@@ -866,12 +980,11 @@ export const useStore = create<State>((set, get) => ({
 async function ensureEvent(
   set: (partial: Partial<State>) => void, get: () => State,
 ): Promise<SamplingEvent | null> {
-  const { projectId, campaignId, stationId, method, session, projects, fix } = get();
-  const project = projects.find((p) => p.id === projectId);
-  if (!project || !campaignId || !stationId || !method) {
-    get().notify('Selecciona proyecto, campaña, estación y metodología primero.', 'warn');
-    return null;
-  }
+  const ctx = await contextoParaEscribir(get);
+  if (!ctx) return null;
+  const { projectId, session, projects, fix } = get();
+  const { campaignId, stationId, method } = ctx;
+  const project = projects.find((p) => p.id === projectId)!;
   const now = new Date();
   const event = await getOrCreateEvent(
     { projectId: projectId!, campaignId, stationId, siteId: null, method, eventDate: now.toISOString().slice(0, 10) },

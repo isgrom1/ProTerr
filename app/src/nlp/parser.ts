@@ -150,6 +150,23 @@ function emptyObservation(verbatim: string): ParsedObservation {
 }
 
 /** Busca la frase más larga de un léxico que empiece en `start`. */
+/**
+ * Igualdad de palabra tolerando el plural.
+ *
+ * Al contar varios individuos el participio se dice en plural —"dos plateros
+ * POSADOS", "tres ratones MUERTOS"— y el léxico sólo traía el singular, así
+ * que la conducta quedaba vacía justo en los registros de más de uno. Enumerar
+ * los plurales uno por uno es la otra salida, y se olvida el día que se agrega
+ * una conducta nueva.
+ */
+function mismaPalabra(token: string | undefined, palabra: string): boolean {
+  if (token === undefined) return false;
+  if (token === palabra) return true;
+  // Sólo se quita la 's' final, y nunca de palabras muy cortas: "tres" no es
+  // el plural de "tre".
+  return token.length > 4 && token.endsWith('s') && token.slice(0, -1) === palabra;
+}
+
 function matchLexicon<T>(
   entries: Array<LexEntry<T>>, tokens: string[], start: number,
 ): { value: T; length: number; entry: LexEntry<T> } | null {
@@ -160,7 +177,7 @@ function matchLexicon<T>(
       if (words.length > tokens.length - start) continue;
       let ok = true;
       for (let i = 0; i < words.length; i++) {
-        if (tokens[start + i] !== words[i]) { ok = false; break; }
+        if (!mismaPalabra(tokens[start + i], words[i])) { ok = false; break; }
       }
       if (ok && (!best || words.length > best.length)) {
         best = { value: entry.value, length: words.length, entry };
@@ -235,7 +252,17 @@ export function parseUtterance(raw: string, ctx: ParseContext): ParsedUtterance 
       // Si la frase declaraba una ausencia, lo no interpretado son justamente
       // las palabras de esa declaración: avisar sería ruido.
       else if (obs.unparsed.length && !result.noDetections) {
-        result.warnings.push(`No se interpretó: "${chunk}"`);
+        // Un dictado NO SE TIRA. El catálogo de arranque trae 257 especies y
+        // Chile tiene muchas más: lo que no reconozco se guarda con el nombre
+        // tal como se dijo, y se identifica en gabinete. Perder lo que alguien
+        // dictó en un cerro, por no tener la especie en una lista, es el peor
+        // error posible de esta app.
+        obs.verbatimTaxonText = obs.unparsed.join(' ');
+        obs.unparsed = [];
+        result.observations.push(obs);
+        result.warnings.push(
+          `No conozco "${obs.verbatimTaxonText}": queda guardado tal cual para que lo identifiques después.`,
+        );
       }
     }
   }
