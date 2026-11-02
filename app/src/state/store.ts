@@ -155,6 +155,8 @@ interface State {
   deleteTemplate(id: string): Promise<void>;
 
   /** Proyecto y campañas: lo primero que hay que poner para trabajar de verdad. */
+  /** Carga el catálogo de especies de la consultora, fusionando con el actual. */
+  importarCatalogo(taxones: Taxon[]): Promise<void>;
   saveProject(project: Project): Promise<void>;
   /** Devuelve la campaña del proyecto, creándola si no hay ninguna. */
   ensureCampaign(projectId: string): Promise<string>;
@@ -884,6 +886,13 @@ export const useStore = create<State>((set, get) => ({
     set({ templates: await db.templates.toArray(), templateId: template.id });
     globalThis.localStorage?.setItem('proterr.templateId', template.id);
     get().notify(`Plantilla "${template.name}" guardada.`);
+  },
+
+  async importarCatalogo(taxones) {
+    await db.taxa.bulkPut(taxones);
+    const todos = await db.taxa.toArray();
+    set({ taxonIndex: new TaxonIndex(todos) });
+    get().notify(`Catálogo cargado: ${taxones.length} especies. Ahora hay ${todos.length}.`);
   },
 
   async saveProject(project) {

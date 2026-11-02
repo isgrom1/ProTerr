@@ -19,6 +19,9 @@ import {
   type SheetOverride, type TemplateDetection,
 } from '../../import/template';
 import { analyzeWorkbook, type ImportPreview } from '../../import/planilla';
+import {
+  construirCatalogo, detectarCatalogo, ETIQUETA_CAMPO, type DeteccionCatalogo,
+} from '../../import/catalogo';
 import { readKmlFile, toStationCandidates, type StationCandidate } from '../../geo/kml';
 import { useStore } from '../../state/store';
 import { proveedorSimulado, setProveedorAds, SIN_ADS } from '../../licence/ads';
@@ -191,6 +194,8 @@ export function Ajustes() {
           </div>
         )}
       </section>
+
+      <CatalogoEspecies />
 
       <section className="card">
         <h2>Catálogos offline</h2>
@@ -899,5 +904,108 @@ function EditorProyecto({ valor, onCambio, onGuardar, onCancelar }: {
         <button className="btn ghost" onClick={onCancelar}>Cancelar</button>
       </div>
     </>
+  );
+}
+
+
+/**
+ * El catálogo de especies de la consultora.
+ *
+ * El de arranque trae 257 especies escritas para este proyecto; es un punto de
+ * partida, no la fauna de Chile. En terreno se nota al primer bicho que no
+ * está. Y parchar especie por especie es la pregunta equivocada: cada
+ * consultora trabaja contra SU lista autorizada, porque son esos nombres los
+ * que su planilla espera.
+ *
+ * Suele venir en el mismo archivo que el formulario, en otra hoja.
+ */
+function CatalogoEspecies() {
+  const s = useStore();
+  const [buffer, setBuffer] = useState<ArrayBuffer | null>(null);
+  const [deteccion, setDeteccion] = useState<DeteccionCatalogo | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [cargando, setCargando] = useState(false);
+
+  const total = s.taxonIndex?.size ?? 0;
+
+  return (
+    <section className="card">
+      <h2>Catálogo de especies</h2>
+      <p className="muted" style={{ fontSize: 13, marginTop: 0 }}>
+        Ahora hay <b>{total}</b> especies. Las de arranque son un punto de partida escrito
+        para ProTerr, no la fauna de Chile: si tu consultora tiene su lista autorizada,
+        cárgala y manda esa. <b>El archivo no se guarda</b>, sólo las especies.
+      </p>
+
+      <div className="field">
+        <label htmlFor="catfile">Lista de especies (Excel)</label>
+        <input id="catfile" type="file" accept=".xlsx,.xlsm,.xlsb,.xls"
+          onChange={async (e) => {
+            const file = e.target.files?.[0];
+            if (!file) return;
+            setError(null);
+            const ab = await file.arrayBuffer();
+            const det = detectarCatalogo(ab);
+            if (!det) {
+              setError('No encontré una hoja con nombres de especies. Debe tener al menos nombre común o científico, y alguna columna de taxonomía.');
+              setBuffer(null); setDeteccion(null);
+              return;
+            }
+            setBuffer(ab);
+            setDeteccion(det);
+          }} />
+      </div>
+
+      {error && <p className="issue" data-severity="blocker" style={{ fontSize: 13 }}>{error}</p>}
+
+      {deteccion && buffer && (
+        <>
+          <p style={{ margin: '10px 0 6px' }}>
+            Hoja <b>{deteccion.hoja}</b> · <b>{deteccion.filas}</b> especies.
+          </p>
+          <p className="muted" style={{ fontSize: 13, margin: '0 0 8px' }}>
+            {deteccion.ejemplos.join(' · ')}
+          </p>
+
+          {deteccion.hojasPosibles.length > 1 && (
+            <div className="field">
+              <label htmlFor="cathoja">¿Es ésta la hoja?</label>
+              <select id="cathoja" value={deteccion.hoja}
+                onChange={(e) => setDeteccion(detectarCatalogo(buffer, e.target.value) ?? deteccion)}>
+                {deteccion.hojasPosibles.map((h) => <option key={h} value={h}>{h}</option>)}
+              </select>
+            </div>
+          )}
+
+          <ul className="list" style={{ marginBottom: 10 }}>
+            {deteccion.columnas.filter((c) => c.header).map((c) => (
+              <li key={c.index}>
+                <span className="meta">{c.header}</span>
+                <span className="name">{c.campo ? ETIQUETA_CAMPO[c.campo] : '— no se usa —'}</span>
+              </li>
+            ))}
+          </ul>
+
+          <div className="row">
+            <button className="btn primary" disabled={cargando} onClick={async () => {
+              setCargando(true);
+              try {
+                const existentes = await db.taxa.toArray();
+                const { taxones } = construirCatalogo(buffer, deteccion, existentes);
+                await s.importarCatalogo(taxones);
+                setDeteccion(null); setBuffer(null);
+              } finally {
+                setCargando(false);
+              }
+            }}>{cargando ? 'Cargando…' : `Cargar ${deteccion.filas} especies`}</button>
+            <button className="btn ghost" onClick={() => { setDeteccion(null); setBuffer(null); }}>Cancelar</button>
+          </div>
+          <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>
+            Se fusiona con lo que ya hay: una especie que ya tenía registros conserva su
+            identificador, así que no se queda ningún registro huérfano.
+          </p>
+        </>
+      )}
+    </section>
   );
 }

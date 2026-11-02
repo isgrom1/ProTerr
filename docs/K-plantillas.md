@@ -167,3 +167,40 @@ que una campaña parezca peor de lo que fue.
 
 El alcance `registros_todos` sigue existiendo para una plantilla ajena que sí
 quiera una sola hoja con todo.
+
+## El catálogo de especies también lo trae la consultora
+
+El catálogo de arranque de ProTerr trae 257 especies escritas para este
+proyecto. Es un punto de partida, no la fauna de Chile, y en terreno se nota al
+primer bicho que no está: en Atacama se dictó «platero» y no existía.
+
+Parchar el catálogo especie por especie no escala, y además es la pregunta
+equivocada. **Cada consultora trabaja contra su lista autorizada**, y los
+nombres de esa lista son los que su planilla espera: un registro con el nombre
+común de otra lista no le sirve aunque la especie sea la misma.
+
+Y la lista suele venir en el mismo archivo que el formulario, en otra hoja. El
+importador (`import/catalogo.ts`) busca la hoja que tenga nombre común o
+científico más taxonomía, y se queda con la que más especies tiene; las demás
+hojas nombran especies en sus columnas, pero no son el listado.
+
+Las columnas se reconocen con el **mismo** `guessField` de las plantillas, más
+una tabla corta para lo que allá significa otra cosa: «Tipo», en una lista de
+especies, es el filo —Chordata, Arthropoda—, no el tipo de registro.
+
+Tres reglas:
+
+- **El archivo no se guarda.** Se lee en memoria, se extrae el catálogo y se
+  descarta, igual que con las plantillas.
+- **No se inventa taxonomía.** Lo que la lista no diga queda vacío, y el guión
+  con que las planillas escriben los vacíos se trata como vacío, no como dato.
+- **No se borra lo que ya había.** Se fusiona por nombre científico, y una
+  especie que ya tenía registros **conserva su identificador**: cambiarlo
+  dejaría huérfanos los registros que la referencian.
+
+Un nombre común que aparece en dos especies queda marcado como ambiguo, para
+que la app pregunte en vez de elegir la primera —que es justo lo que hacía el
+`INDEX/MATCH` de la planilla.
+
+Probado con una lista real de 889 filas: 872 especies, 460 aves, 193 mamíferos,
+152 reptiles, 65 anfibios, 27 nombres comunes ambiguos.
