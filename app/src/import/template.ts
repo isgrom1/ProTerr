@@ -27,6 +27,13 @@ export interface DetectedColumn {
    * adivinar; con "Tipo C" a la vista se decide en un segundo.
    */
   samples: string[];
+  /**
+   * La app decidió dejarla vacía y no hace falta preguntar. No es lo mismo
+   * que "no sé qué es": el correlativo de fila y las columnas que la propia
+   * planilla marca como autocompletadas van vacías A PROPÓSITO, y mezclarlas
+   * con las dudas reales llenaba la revisión de ruido.
+   */
+  omitida: 'correlativo' | 'autocompletada' | null;
 }
 
 export interface DetectedSheet {
@@ -111,6 +118,25 @@ const NUMERIC_FIELDS = new Set([
 ]);
 
 /** ¿La columna trae números y nada más? Se miran hasta 30 filas con dato. */
+/** Encabezados del correlativo de fila. No son un dato: son la numeración. */
+const CORRELATIVO = /^(n|n°|nº|no|num|numero|item|itm|correlativo|#|id n)$/;
+
+/**
+ * Por qué una columna sin emparejar va vacía a propósito, o null si de verdad
+ * no se sabe qué es.
+ */
+function porQueVaVacia(header: string, samples: string[]): DetectedColumn['omitida'] {
+  // La planilla lo dice ella misma: "(NO LLENAR)", "(no modificar)". Son
+  // columnas con fórmula que se autocompletan.
+  if (/no\s*llenar|no\s*modificar|autocomplet|no\s*editar/i.test(header)) return 'autocompletada';
+
+  const limpio = fold(header);
+  if (!CORRELATIVO.test(limpio)) return null;
+  // Y que de verdad traiga números correlativos, no un código que se llame "N".
+  const numeros = samples.filter((v) => /^\d+$/.test(v.trim()));
+  return numeros.length >= 2 ? 'correlativo' : null;
+}
+
 function looksNumeric(body: unknown[][], index: number): boolean {
   let numeros = 0;
   let total = 0;
@@ -191,13 +217,15 @@ export function detectTemplate(
         && !NUMERIC_FIELDS.has(guess.fieldId)
         && looksNumeric(body, index);
       const fieldId = descartado ? null : guess.fieldId;
+      const samples = samplesOf(body, index);
       columns.push({
         index, header,
         fieldId,
         fieldLabel: fieldId ? FIELDS_BY_ID.get(fieldId)?.label ?? null : null,
         confidence: fieldId ? guess.confidence : 0,
         matchedAlias: fieldId ? guess.matchedAlias : undefined,
-        samples: samplesOf(body, index),
+        samples,
+        omitida: fieldId ? null : porQueVaVacia(header, samples),
       });
     });
 

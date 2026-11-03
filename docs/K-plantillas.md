@@ -204,3 +204,43 @@ que la app pregunte en vez de elegir la primera —que es justo lo que hacía el
 
 Probado con una lista real de 889 filas: 872 especies, 460 aves, 193 mamíferos,
 152 reptiles, 65 anfibios, 27 nombres comunes ambiguos.
+
+## Cómo se revisa una planilla sin abandonar a la mitad
+
+**El problema, reportado dos veces desde terreno.** «Esa parte es muy larga»,
+y después de un primer arreglo, «sigue siendo engorroso». Una planilla real
+trae 133 columnas: mostrarlas todas convierte un trámite de diez segundos en
+diez minutos de scroll en un teléfono.
+
+Lo que hacen los importadores de planillas que no se abandonan —Flatfile,
+CSVbox, Dromo, OneSchema— converge en tres reglas:
+
+1. **Confianza por tramos.** Los calces seguros se aplican solos; los medios se
+   confirman; los bajos nunca se aplican en silencio, porque un mapeo
+   equivocado corrompe el dato sin avisar.
+2. **El mapeo aparece sólo si hay algo que arreglar.** El camino feliz es un
+   botón.
+3. **Valores de ejemplo al lado de cada columna.** «TIPO» no dice nada; «Tipo C»
+   se decide en un segundo.
+
+Las tres estaban a medias y ahora están completas. La que faltaba de verdad es
+la segunda: el detalle vive detrás de «Revisar hoja por hoja».
+
+**Y una cuarta, propia de esta planilla.** «No sé qué es» y «va vacía a
+propósito» no son lo mismo, y pintarlas igual convertía cuatro decisiones ya
+tomadas en cuatro alarmas:
+
+- El **correlativo de fila** —«N», «N°»— no es un dato, es la numeración. Se
+  omite, pero sólo si además trae números: una columna llamada «N» con códigos
+  sí se pregunta.
+- Lo que la planilla **declara autocompletado** —«(NO LLENAR)», «(no
+  modificar)»— se omite. La guía de uso de la planilla lo dice: esas columnas
+  se llenan solas con fórmulas.
+
+Con la planilla real eso baja la revisión de **5 columnas sin asignar y 27 por
+mirar a una sola duda** en 133 columnas.
+
+**El catálogo viaja en el mismo archivo.** La planilla que se sube para
+aprender su formato trae, en otra hoja, la lista de especies de la consultora.
+Pedirla aparte era hacer subir el mismo archivo dos veces para dos cosas que
+vienen juntas: ahora es una casilla en la misma pantalla.

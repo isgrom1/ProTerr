@@ -57,6 +57,8 @@ export function Ajustes() {
   // fila de encabezado obliga a volver a leerlo, no a parchar el resultado.
   const [templateFile, setTemplateFile] = useState<ArrayBuffer | null>(null);
   const [overrides, setOverrides] = useState<Record<string, SheetOverride>>({});
+  const [catalogo, setCatalogo] = useState<DeteccionCatalogo | null>(null);
+  const [conCatalogo, setConCatalogo] = useState(true);
   const [modo, setModoLocal] = useState<Modo | null>(() => readModo());
   const [rceUrl, setRceUrl] = useState('');
   const [cache, setCache] = useState<{ especies: number; masAntigua: string | null }>({ especies: 0, masAntigua: null });
@@ -372,6 +374,11 @@ export function Ajustes() {
               setOverrides({});
               setDetection(detectTemplate(buffer, file.name));
               setTemplateName(file.name.replace(/\.[^.]+$/, ''));
+              // El mismo archivo suele traer, en otra hoja, la lista de
+              // especies de la consultora. Ofrecerla aquí ahorra subir el
+              // archivo dos veces para dos cosas que vienen juntas.
+              setCatalogo(detectarCatalogo(buffer));
+              setConCatalogo(true);
             }} />
         </div>
 
@@ -396,7 +403,14 @@ export function Ajustes() {
                 })),
               })),
             })}
+            catalogo={catalogo}
+            conCatalogo={conCatalogo}
+            onConCatalogo={setConCatalogo}
             onSave={async () => {
+              if (catalogo && conCatalogo && templateFile) {
+                const existentes = await db.taxa.toArray();
+                await s.importarCatalogo(construirCatalogo(templateFile, catalogo, existentes).taxones);
+              }
               await s.saveTemplate(toTemplate(detection, {
                 id: `tpl_${Date.now().toString(36)}`,
                 name: templateName || detection.fileName,
@@ -405,8 +419,9 @@ export function Ajustes() {
               setDetection(null);
               setTemplateFile(null);
               setOverrides({});
+              setCatalogo(null);
             }}
-            onCancel={() => { setDetection(null); setTemplateFile(null); setOverrides({}); }}
+            onCancel={() => { setDetection(null); setTemplateFile(null); setOverrides({}); setCatalogo(null); }}
           />
         )}
       </section>
@@ -514,27 +529,86 @@ function LicenciaPruebas() {
 }
 
 /** Revisión del mapeo antes de guardar la plantilla. Nada se asume en silencio. */
-function TemplateReview({ detection, name, onName, organization, onOrganization, onColumn, onSheet, onSave, onCancel }: {
+/**
+ * Revisar lo que la app entendió de la planilla.
+ *
+ * El camino feliz es UN botón. Así lo resuelven los importadores que no se
+ * abandonan a la mitad: se aplican solos los calces seguros, se confirman los
+ * dudosos y el mapeo columna por columna sólo aparece si alguien lo pide.
+ * Con una planilla real de 133 columnas, mostrarlo todo de entrada convierte
+ * un trámite de diez segundos en diez minutos de scroll en un teléfono, que
+ * es lo que pasó en terreno.
+ */
+function TemplateReview({ detection, name, onName, organization, onOrganization, onColumn, onSheet, onSave, onCancel, catalogo, conCatalogo, onConCatalogo }: {
   detection: TemplateDetection;
   name: string; onName: (v: string) => void;
   organization: string; onOrganization: (v: string) => void;
   onColumn: (sheet: string, index: number, fieldId: string | null) => void;
   onSheet: (sheet: string, patch: SheetOverride) => void;
   onSave: () => void; onCancel: () => void;
+  catalogo: DeteccionCatalogo | null;
+  conCatalogo: boolean; onConCatalogo: (v: boolean) => void;
 }) {
   const usable = detection.sheets.filter((sh) => !sh.ignored);
-  const unmapped = usable.reduce((n, sh) => n + sh.columns.filter((c) => !c.fieldId).length, 0);
   const total = usable.reduce((n, sh) => n + sh.columns.length, 0);
+  // Tres estados, no dos: reconocida, vacía a propósito, y la única que
+  // importa, la que hay que mirar.
+  const vacias = usable.reduce((n, sh) => n + sh.columns.filter((c) => c.omitida).length, 0);
+  const revisar = usable.reduce((n, sh) => n + sh.columns.filter(
+    (c) => (!c.fieldId && !c.omitida) || (c.fieldId && c.confidence < 0.7)).length, 0);
+  const reconocidas = usable.reduce((n, sh) => n + sh.columns.filter((c) => c.fieldId).length, 0);
   const sinColumna = fieldsWithoutColumn(detection);
-  // Qué hojas se abrieron columna por columna. Cerradas por omisión: una
-  // planilla real trae 133 columnas y revisarlas en un teléfono, antes de
-  // salir a terreno, es tiempo que nadie tiene.
+
+  const [detalle, setDetalle] = useState(false);
   const [abiertas, setAbiertas] = useState<string[]>([]);
   const abrir = (n: string) => setAbiertas((a) => (a.includes(n) ? a.filter((x) => x !== n) : [...a, n]));
 
   return (
     <div style={{ marginTop: 12 }}>
-      <div className="grid2">
+      <h3 style={{ fontSize: 16, margin: '0 0 4px' }}>Entendí tu planilla</h3>
+      <p style={{ margin: '0 0 10px' }}>
+        <b>{usable.length}</b> hoja{usable.length === 1 ? '' : 's'} ·{' '}
+        <b>{reconocidas}</b> de <b>{total}</b> columnas reconocidas
+        {revisar > 0 && <> · <b>{revisar}</b> por revisar</>}
+      </p>
+
+      {/* El camino feliz es un botón. El mapeo columna por columna está
+          detrás de "Revisar hoja por hoja", que es donde tiene que estar. */}
+      <div className="row">
+        <button className="btn primary" onClick={onSave}>Usar esta planilla</button>
+        <button className="btn ghost" onClick={onCancel}>Cancelar</button>
+      </div>
+
+      {catalogo && (
+        <label className="row" style={{ alignItems: 'center', gap: 8, marginTop: 12, flexWrap: 'nowrap' }}>
+          <input type="checkbox" checked={conCatalogo} style={{ flex: '0 0 auto', width: 22, height: 22 }}
+            onChange={(e) => onConCatalogo(e.target.checked)} />
+          <span style={{ flex: '1 1 auto' }}>
+            Cargar también las <b>{catalogo.filas}</b> especies de la hoja «{catalogo.hoja}»
+          </span>
+        </label>
+      )}
+
+      <p className="muted" style={{ fontSize: 12, marginTop: 10 }}>
+        Puedes usarla así y ajustarla cuando quieras: cambiar la plantilla no toca los
+        registros ya guardados.
+        {vacias > 0 && <> {vacias} columna{vacias === 1 ? '' : 's'} van vacías a propósito
+        (el correlativo de fila y las que la planilla autocompleta sola).</>}
+      </p>
+
+      {sinColumna.length > 0 && (
+        <p className="muted" style={{ fontSize: 12 }}>
+          <b>Sin columna en esta planilla:</b> {sinColumna.map((f) => f.label).join(', ')}.
+          {' '}Se registran igual y quedan en el respaldo, pero no saldrán en este Excel.
+        </p>
+      )}
+
+      <button className="btn ghost" style={{ marginTop: 6 }} onClick={() => setDetalle(!detalle)}>
+        {detalle ? 'Ocultar el detalle' : 'Revisar hoja por hoja'}
+      </button>
+
+      {!detalle ? null : (<>
+      <div className="grid2" style={{ marginTop: 12 }}>
         <div className="field">
           <label htmlFor="tplname">Nombre de la plantilla</label>
           <input id="tplname" type="text" value={name} onChange={(e) => onName(e.target.value)} />
@@ -545,33 +619,6 @@ function TemplateReview({ detection, name, onName, organization, onOrganization,
             onChange={(e) => onOrganization(e.target.value)} />
         </div>
       </div>
-
-      <p>
-        <span className="chip ok">{total - unmapped} de {total} columnas reconocidas</span>{' '}
-        {unmapped > 0 && <span className="chip warn">{unmapped} sin asignar</span>}
-      </p>
-
-      {/* Guardar va ARRIBA. Estaba al final de las 133 columnas, así que para
-          aceptar lo que la app ya había reconocido bien había que recorrerlas
-          todas. En terreno eso no se hace: se abandona. */}
-      <div className="row" style={{ marginBottom: 10 }}>
-        <button className="btn primary" onClick={onSave}>Guardar plantilla</button>
-        <button className="btn ghost" onClick={onCancel}>Cancelar</button>
-      </div>
-      <p className="muted" style={{ fontSize: 12, marginTop: 0 }}>
-        Puedes guardar así y revisar después: cambiar la plantilla no toca los registros ya
-        guardados. {unmapped > 0 && <>Las {unmapped} sin asignar saldrán vacías, que es preferible
-        a una columna con el dato equivocado.</>}
-      </p>
-
-      {/* Lo que la app va a recoger en terreno y esta planilla no tiene dónde
-          escribir. No es un error, pero hay que verlo antes de guardar. */}
-      {sinColumna.length > 0 && (
-        <p className="muted" style={{ fontSize: 12, marginTop: 10 }}>
-          <b>Sin columna en esta planilla:</b> {sinColumna.map((f) => f.label).join(', ')}.
-          {' '}Se van a registrar igual y quedan en el respaldo, pero no saldrán en este Excel.
-        </p>
-      )}
 
       {detection.sheets.map((sheet) => (
         <div key={sheet.name} style={{ marginTop: 14, opacity: sheet.ignored ? 0.55 : 1 }}>
@@ -622,7 +669,8 @@ function TemplateReview({ detection, name, onName, organization, onOrganization,
               // inicio) ronda 0,75 y casi siempre es correcto. Marcarlo
               // llenaba la revisión de columnas que estaban bien, que es otra
               // forma de la misma lista inabarcable.
-              const atencion = sheet.columns.filter((c) => !c.fieldId || c.confidence < 0.7);
+              const atencion = sheet.columns.filter(
+                (c) => (!c.fieldId && !c.omitida) || (c.fieldId && c.confidence < 0.7));
               const todo = abiertas.includes(sheet.name);
               const mostradas = todo ? sheet.columns : atencion;
               return (
@@ -656,9 +704,10 @@ function TemplateReview({ detection, name, onName, organization, onOrganization,
       ))}
 
       <div className="row" style={{ marginTop: 12 }}>
-        <button className="btn primary" onClick={onSave}>Guardar plantilla</button>
+        <button className="btn primary" onClick={onSave}>Usar esta planilla</button>
         <button className="btn ghost" onClick={onCancel}>Cancelar</button>
       </div>
+      </>)}
     </div>
   );
 }
@@ -683,7 +732,7 @@ const SCOPES: Array<[string, string]> = [
 ];
 
 function FragmentRow({ column, onChange }: {
-  column: { header: string; fieldId: string | null; confidence: number; samples: string[] };
+  column: { header: string; fieldId: string | null; confidence: number; samples: string[]; omitida?: 'correlativo' | 'autocompletada' | null };
   onChange: (fieldId: string | null) => void;
 }) {
   return (
@@ -693,7 +742,14 @@ function FragmentRow({ column, onChange }: {
         {column.fieldId && column.confidence < 1 && (
           <span className="chip warn" style={{ marginLeft: 6, fontSize: 11 }}>aprox.</span>
         )}
-        {!column.fieldId && <span className="chip error" style={{ marginLeft: 6, fontSize: 11 }}>sin asignar</span>}
+        {/* "No sé qué es" y "va vacía a propósito" no son lo mismo, y
+            pintarlas igual de rojo convertía cuatro decisiones ya tomadas en
+            cuatro alarmas. */}
+        {!column.fieldId && (column.omitida
+          ? <span className="chip" style={{ marginLeft: 6, fontSize: 11 }}>
+              {column.omitida === 'correlativo' ? 'correlativo' : 'la planilla la autocompleta'}
+            </span>
+          : <span className="chip error" style={{ marginLeft: 6, fontSize: 11 }}>sin asignar</span>)}
         {/* Ver el dato es lo que permite decidir: "TIPO" no dice nada,
             "Tipo C · Tipo B2" sí. */}
         {column.samples.length > 0 && (

@@ -5,6 +5,7 @@ import taxaSeed from '../data/seed/taxa.json';
 import type { Campaign, Occurrence, Project, SamplingEvent, Station, Taxon } from '../domain/types';
 import { buildDwcArchive, OCCURRENCE_TERMS, toCsv } from './dwca';
 import { NATIVE_TEMPLATE, guessField, type ExportTemplate } from './template';
+import { detectTemplate } from '../import/template';
 import { buildWorkbook } from './workbook';
 import { flatten, type Catalogs } from './shape';
 
@@ -290,6 +291,59 @@ describe('reconocimiento de encabezados ajenos', () => {
 
   it('reconoce la subespecie escrita en dos palabras', () => {
     expect(guessField('sub especie').fieldId).toBe('taxon.infraspecificEpithet');
+  });
+});
+
+describe('columnas que van vacías a propósito', () => {
+  /*
+   * "No sé qué es" y "va vacía a propósito" no son lo mismo. El correlativo de
+   * fila y las columnas que la propia planilla marca como autocompletadas son
+   * decisiones ya tomadas; mezclarlas con las dudas reales llenaba la revisión
+   * de alarmas falsas. En una planilla real eran 4 de las 5 "sin asignar".
+   */
+  const hoja = (filas: unknown[][]) => {
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(filas), 'Registros');
+    return XLSX.write(wb, { type: 'array', bookType: 'xlsx' }) as ArrayBuffer;
+  };
+  const columnas = (filas: unknown[][]) =>
+    detectTemplate(hoja(filas), 'p.xlsx').sheets[0].columns;
+
+  it('el correlativo de fila se omite, no se pregunta', () => {
+    const cols = columnas([
+      ['N°', 'Nombre común', 'Abundancia', 'Fecha'],
+      [1, 'Chucao', 2, '2026-09-04'],
+      [2, 'Loica', 1, '2026-09-04'],
+      [3, 'Zorzal', 1, '2026-09-04'],
+    ]);
+    expect(cols[0]).toMatchObject({ fieldId: null, omitida: 'correlativo' });
+  });
+
+  it('una columna que se llama N pero trae códigos sí se pregunta', () => {
+    const cols = columnas([
+      ['N', 'Nombre común', 'Abundancia', 'Fecha'],
+      ['A-01', 'Chucao', 2, '2026-09-04'],
+      ['A-02', 'Loica', 1, '2026-09-04'],
+    ]);
+    expect(cols[0]).toMatchObject({ fieldId: null, omitida: null });
+  });
+
+  it('lo que la planilla dice que autocompleta se omite', () => {
+    const cols = columnas([
+      ['ID Temporada DwC (NO LLENAR)', 'Nombre común', 'Abundancia', 'Fecha'],
+      ['', 'Chucao', 2, '2026-09-04'],
+      ['', 'Loica', 1, '2026-09-04'],
+    ]);
+    expect(cols[0]).toMatchObject({ fieldId: null, omitida: 'autocompletada' });
+  });
+
+  it('una columna que de verdad no se reconoce sigue preguntándose', () => {
+    const cols = columnas([
+      ['Clave interna de bodega', 'Nombre común', 'Abundancia', 'Fecha'],
+      ['xyz', 'Chucao', 2, '2026-09-04'],
+      ['abc', 'Loica', 1, '2026-09-04'],
+    ]);
+    expect(cols[0]).toMatchObject({ fieldId: null, omitida: null });
   });
 });
 
